@@ -2,6 +2,9 @@
 
 A full-stack esports tournament platform with an AI-powered analytics engine.
 
+## 🚀 Live Demo
+**AI Analytics Dashboard:** https://battlezone-esports-7nps6yjk8yf5xnjlnih85g.streamlit.app
+
 ## Projects
 
 ### 1. BattleZone App (`esports-tournament-app/`)
