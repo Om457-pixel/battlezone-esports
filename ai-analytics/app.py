@@ -119,7 +119,7 @@ if page == "🏠 Overview":
     st.subheader("📊 Game Performance Stats")
     gstats = game_stats(results_df)
     if not gstats.empty:
-        st.dataframe(gstats.style.background_gradient(cmap="Purples"), use_container_width=True)
+        st.dataframe(gstats, use_container_width=True)
 
     # AI Tournament Summary
     st.subheader("🤖 AI Tournament Summary")
