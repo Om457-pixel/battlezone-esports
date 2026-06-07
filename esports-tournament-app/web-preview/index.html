@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BattleZone Esports</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a0f; color: #fff; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 20px; }
+  .phone { width: 390px; min-height: 844px; background: #0d0d1a; border-radius: 40px; border: 2px solid #1e1e3a; overflow: hidden; position: relative; box-shadow: 0 0 60px rgba(99,0,255,0.3); }
+  .status-bar { background: #0d0d1a; padding: 12px 24px 8px; display: flex; justify-content: space-between; font-size: 12px; color: #888; }
+  .screen { display: none; flex-direction: column; height: 100%; }
+  .screen.active { display: flex; }
+
+  /* NAV */
+  .bottom-nav { display: flex; background: #12122a; border-top: 1px solid #1e1e3a; padding: 8px 0 16px; position: sticky; bottom: 0; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; padding: 6px; border: none; background: none; color: #555; font-size: 10px; transition: color 0.2s; }
+  .nav-item.active, .nav-item:hover { color: #7c3aed; }
+  .nav-item svg { width: 22px; height: 22px; }
+
+  /* COMMON */
+  .scroll-area { flex: 1; overflow-y: auto; padding: 16px; }
+  .scroll-area::-webkit-scrollbar { width: 4px; }
+  .scroll-area::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 2px; }
+  .section-title { font-size: 16px; font-weight: 700; color: #e0e0ff; margin-bottom: 12px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+  .badge-live { background: #ff3b3b22; color: #ff3b3b; border: 1px solid #ff3b3b44; }
+  .badge-upcoming { background: #7c3aed22; color: #a78bfa; border: 1px solid #7c3aed44; }
+  .badge-gold { background: #f59e0b22; color: #f59e0b; border: 1px solid #f59e0b44; }
+
+  /* HEADER */
+  .header { padding: 16px 20px 8px; display: flex; justify-content: space-between; align-items: center; }
+  .header-logo { font-size: 22px; font-weight: 900; background: linear-gradient(135deg, #7c3aed, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header-right { display: flex; gap: 12px; align-items: center; }
+  .wallet-chip { background: #1a1a35; border: 1px solid #2a2a4a; border-radius: 20px; padding: 6px 12px; font-size: 13px; color: #a78bfa; display: flex; align-items: center; gap: 6px; }
+
+  /* MATCH CARD */
+  .match-card { background: linear-gradient(135deg, #12122a, #1a1235); border: 1px solid #2a1a4a; border-radius: 16px; padding: 16px; margin-bottom: 12px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+  .match-card:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(124,58,237,0.3); }
+  .match-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .match-title { font-size: 15px; font-weight: 700; color: #e0e0ff; }
+  .match-game { font-size: 12px; color: #7c3aed; margin-top: 2px; }
+  .match-stats { display: flex; gap: 16px; margin-top: 10px; }
+  .stat { display: flex; flex-direction: column; }
+  .stat-label { font-size: 10px; color: #666; }
+  .stat-value { font-size: 13px; font-weight: 700; color: #a78bfa; }
+  .stat-value.green { color: #10b981; }
+  .prize-pool { font-size: 18px; font-weight: 900; color: #f59e0b; }
+  .progress-bar { background: #1e1e3a; border-radius: 4px; height: 4px; margin-top: 10px; }
+  .progress-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #7c3aed, #06b6d4); }
+  .join-btn { width: 100%; margin-top: 12px; padding: 10px; border-radius: 10px; border: none; background: linear-gradient(135deg, #7c3aed, #5b21b6); color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; transition: opacity 0.2s; }
+  .join-btn:hover { opacity: 0.85; }
+  .join-btn.live { background: linear-gradient(135deg, #ff3b3b, #b91c1c); }
+
+  /* LEADERBOARD */
+  .lb-row { display: flex; align-items: center; gap: 12px; padding: 12px; background: #12122a; border-radius: 12px; margin-bottom: 8px; border: 1px solid #1e1e3a; }
+  .lb-rank { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; }
+  .rank-1 { background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; }
+  .rank-2 { background: linear-gradient(135deg, #9ca3af, #6b7280); color: #000; }
+  .rank-3 { background: linear-gradient(135deg, #cd7c2f, #92400e); color: #fff; }
+  .rank-other { background: #1e1e3a; color: #888; }
+  .lb-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #7c3aed, #06b6d4); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+  .lb-info { flex: 1; }
+  .lb-name { font-size: 14px; font-weight: 700; color: #e0e0ff; }
+  .lb-pts { font-size: 11px; color: #7c3aed; }
+  .lb-earnings { font-size: 13px; font-weight: 700; color: #10b981; }
+
+  /* PROFILE */
+  .profile-header { background: linear-gradient(180deg, #1a0a35 0%, #0d0d1a 100%); padding: 24px 20px; text-align: center; }
+  .profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #7c3aed, #06b6d4); margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 900; border: 3px solid #7c3aed; }
+  .profile-name { font-size: 20px; font-weight: 900; color: #e0e0ff; }
+  .profile-tag { font-size: 13px; color: #7c3aed; margin-top: 4px; }
+  .level-badge { display: inline-flex; align-items: center; gap: 6px; background: #1a1a35; border: 1px solid #7c3aed44; border-radius: 20px; padding: 4px 12px; margin-top: 10px; font-size: 12px; color: #a78bfa; }
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0; }
+  .stat-card { background: #12122a; border: 1px solid #1e1e3a; border-radius: 12px; padding: 12px; text-align: center; }
+  .stat-card-value { font-size: 18px; font-weight: 900; color: #a78bfa; }
+  .stat-card-label { font-size: 10px; color: #666; margin-top: 2px; }
+
+  /* WALLET */
+  .wallet-card { background: linear-gradient(135deg, #1a0a35, #0a1a35); border: 1px solid #2a1a4a; border-radius: 20px; padding: 24px; margin-bottom: 16px; text-align: center; }
+  .wallet-balance { font-size: 36px; font-weight: 900; color: #a78bfa; }
+  .wallet-label { font-size: 13px; color: #666; margin-top: 4px; }
+  .wallet-actions { display: flex; gap: 10px; margin-top: 16px; }
+  .wallet-btn { flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: 700; font-size: 13px; cursor: pointer; }
+  .wallet-btn.deposit { background: linear-gradient(135deg, #7c3aed, #5b21b6); color: #fff; }
+  .wallet-btn.withdraw { background: #1e1e3a; color: #a78bfa; border: 1px solid #2a2a4a; }
+  .tx-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #12122a; border-radius: 10px; margin-bottom: 8px; }
+  .tx-info { display: flex; flex-direction: column; }
+  .tx-title { font-size: 13px; color: #e0e0ff; }
+  .tx-date { font-size: 11px; color: #555; margin-top: 2px; }
+  .tx-amount { font-size: 14px; font-weight: 700; }
+  .tx-amount.credit { color: #10b981; }
+  .tx-amount.debit { color: #ff3b3b; }
+
+  /* SPIN WHEEL */
+  .spin-container { display: flex; flex-direction: column; align-items: center; padding: 20px; }
+  .wheel-wrap { position: relative; width: 260px; height: 260px; margin: 20px auto; }
+  .wheel { width: 260px; height: 260px; border-radius: 50%; border: 4px solid #7c3aed; position: relative; overflow: hidden; transition: transform 3s cubic-bezier(0.17, 0.67, 0.12, 0.99); }
+  .wheel-segment { position: absolute; width: 50%; height: 50%; transform-origin: 100% 100%; }
+  .wheel-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50px; height: 50px; background: #0d0d1a; border-radius: 50%; border: 3px solid #7c3aed; display: flex; align-items: center; justify-content: center; font-size: 20px; z-index: 10; }
+  .wheel-pointer { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-bottom: 24px solid #f59e0b; z-index: 20; }
+  .spin-btn { padding: 14px 48px; border-radius: 30px; border: none; background: linear-gradient(135deg, #7c3aed, #06b6d4); color: #fff; font-size: 16px; font-weight: 900; cursor: pointer; margin-top: 10px; box-shadow: 0 0 30px rgba(124,58,237,0.5); transition: transform 0.1s; }
+  .spin-btn:active { transform: scale(0.96); }
+  .spin-cost { font-size: 12px; color: #666; margin-top: 8px; }
+  .prizes-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: 100%; margin-top: 16px; }
+  .prize-item { background: #12122a; border: 1px solid #1e1e3a; border-radius: 10px; padding: 10px 6px; text-align: center; }
+  .prize-icon { font-size: 20px; }
+  .prize-name { font-size: 9px; color: #888; margin-top: 4px; }
+
+  /* AUTH */
+  .auth-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; flex: 1; }
+  .auth-logo { font-size: 42px; font-weight: 900; background: linear-gradient(135deg, #7c3aed, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 8px; }
+  .auth-tagline { font-size: 14px; color: #666; margin-bottom: 40px; text-align: center; }
+  .auth-input { width: 100%; background: #12122a; border: 1px solid #2a2a4a; border-radius: 12px; padding: 14px 16px; color: #fff; font-size: 15px; margin-bottom: 12px; outline: none; }
+  .auth-input:focus { border-color: #7c3aed; }
+  .auth-btn { width: 100%; padding: 14px; border-radius: 12px; border: none; background: linear-gradient(135deg, #7c3aed, #5b21b6); color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 8px; }
+  .auth-divider { color: #333; margin: 16px 0; font-size: 13px; }
+  .otp-boxes { display: flex; gap: 10px; margin: 16px 0; }
+  .otp-box { width: 48px; height: 56px; background: #12122a; border: 2px solid #2a2a4a; border-radius: 10px; text-align: center; font-size: 22px; font-weight: 700; color: #a78bfa; outline: none; }
+  .otp-box:focus { border-color: #7c3aed; }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #1a1a35; border: 1px solid #7c3aed; border-radius: 12px; padding: 12px 20px; font-size: 13px; color: #a78bfa; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
+  .toast.show { opacity: 1; }
+
+  /* MODAL */
+  .modal-overlay { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: flex-end; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #12122a; border-radius: 24px 24px 0 0; padding: 24px; width: 100%; border-top: 1px solid #2a2a4a; }
+  .modal-title { font-size: 18px; font-weight: 700; color: #e0e0ff; margin-bottom: 16px; }
+  .modal-input { width: 100%; background: #0d0d1a; border: 1px solid #2a2a4a; border-radius: 10px; padding: 12px; color: #fff; font-size: 14px; margin-bottom: 10px; outline: none; }
+  .modal-btn { width: 100%; padding: 13px; border-radius: 10px; border: none; background: linear-gradient(135deg, #7c3aed, #5b21b6); color: #fff; font-weight: 700; cursor: pointer; margin-top: 6px; }
+  .modal-close { float: right; background: none; border: none; color: #666; font-size: 20px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="status-bar"><span>9:41</span><span>⚡ 87%</span></div>
+
+  <!-- AUTH SCREEN -->
+  <div class="screen active" id="screen-auth">
+    <div class="auth-screen">
+      <div class="auth-logo">⚔ BattleZone</div>
+      <div class="auth-tagline">Compete. Win. Dominate.</div>
+      <input class="auth-input" type="tel" placeholder="📱 Enter mobile number" id="phone-input" maxlength="10">
+      <button class="auth-btn" onclick="sendOTP()">Send OTP</button>
+      <div class="auth-divider">— or continue with —</div>
+      <button class="auth-btn" style="background:linear-gradient(135deg,#1a73e8,#0d47a1)" onclick="showToast('Google Sign-In requires Firebase setup')">🔵 Continue with Google</button>
+    </div>
+  </div>
+
+  <!-- OTP SCREEN -->
+  <div class="screen" id="screen-otp">
+    <div class="auth-screen">
+      <div class="auth-logo">⚔ BattleZone</div>
+      <div class="auth-tagline">Enter the OTP sent to your number</div>
+      <div class="otp-boxes">
+        <input class="otp-box" maxlength="1" oninput="otpNext(this,0)">
+        <input class="otp-box" maxlength="1" oninput="otpNext(this,1)">
+        <input class="otp-box" maxlength="1" oninput="otpNext(this,2)">
+        <input class="otp-box" maxlength="1" oninput="otpNext(this,3)">
+        <input class="otp-box" maxlength="1" oninput="otpNext(this,4)">
+        <input class="otp-box" maxlength="1" oninput="otpNext(this,5)">
+      </div>
+      <button class="auth-btn" onclick="verifyOTP()">Verify & Enter</button>
+      <div class="auth-divider" style="margin-top:16px"><span style="color:#7c3aed;cursor:pointer" onclick="showScreen('auth')">← Change number</span></div>
+    </div>
+  </div>
+
+  <!-- HOME SCREEN -->
+  <div class="screen" id="screen-home">
+    <div class="header">
+      <div class="header-logo">⚔ BattleZone</div>
+      <div class="header-right">
+        <div class="wallet-chip">💰 ₹250</div>
+        <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#06b6d4);display:flex;align-items:center;justify-content:center;font-weight:700;cursor:pointer" onclick="showScreen('profile')">B</div>
+      </div>
+    </div>
+    <div class="scroll-area">
+      <!-- Banner -->
+      <div style="background:linear-gradient(135deg,#1a0a35,#0a1a35);border-radius:16px;padding:20px;margin-bottom:16px;border:1px solid #2a1a4a;position:relative;overflow:hidden">
+        <div style="position:absolute;right:-10px;top:-10px;font-size:80px;opacity:0.15">🎮</div>
+        <div style="font-size:11px;color:#7c3aed;font-weight:700;letter-spacing:2px">FEATURED TOURNAMENT</div>
+        <div style="font-size:20px;font-weight:900;color:#e0e0ff;margin:6px 0">BGMI Pro League S4</div>
+        <div style="font-size:28px;font-weight:900;color:#f59e0b">₹50,000 <span style="font-size:13px;color:#888">Prize Pool</span></div>
+        <button class="join-btn" style="width:auto;padding:10px 24px;margin-top:12px" onclick="openJoinModal('BGMI Pro League S4','₹50,000')">Join Now →</button>
+      </div>
+
+      <!-- Live Matches -->
+      <div class="section-title">🔴 Live Now</div>
+      <div class="match-card" onclick="showScreen('match')">
+        <div class="match-card-header">
+          <div><div class="match-title">Free Fire MAX Cup</div><div class="match-game">🔥 Free Fire MAX</div></div>
+          <span class="badge badge-live">● LIVE</span>
+        </div>
+        <div class="match-stats">
+          <div class="stat"><span class="stat-label">Prize Pool</span><span class="prize-pool">₹10,000</span></div>
+          <div class="stat"><span class="stat-label">Entry Fee</span><span class="stat-value">₹50</span></div>
+          <div class="stat"><span class="stat-label">Players</span><span class="stat-value green">87/100</span></div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:87%"></div></div>
+        <button class="join-btn live" onclick="event.stopPropagation();openJoinModal('Free Fire MAX Cup','₹10,000')">Join Match — ₹50</button>
+      </div>
+
+      <!-- Upcoming -->
+      <div class="section-title" style="margin-top:8px">⏰ Upcoming</div>
+      <div class="match-card" onclick="showScreen('match')">
+        <div class="match-card-header">
+          <div><div class="match-title">BGMI Solo Showdown</div><div class="match-game">🎯 BGMI</div></div>
+          <span class="badge badge-upcoming">UPCOMING</span>
+        </div>
+        <div class="match-stats">
+          <div class="stat"><span class="stat-label">Prize Pool</span><span class="prize-pool">₹5,000</span></div>
+          <div class="stat"><span class="stat-label">Entry Fee</span><span class="stat-value">₹25</span></div>
+          <div class="stat"><span class="stat-label">Players</span><span class="stat-value green">42/100</span></div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:42%"></div></div>
+        <button class="join-btn" onclick="event.stopPropagation();openJoinModal('BGMI Solo Showdown','₹5,000')">Join Match — ₹25</button>
+      </div>
+      <div class="match-card" onclick="showScreen('match')">
+        <div class="match-card-header">
+          <div><div class="match-title">COD Mobile Blitz</div><div class="match-game">💥 Call of Duty Mobile</div></div>
+          <span class="badge badge-upcoming">UPCOMING</span>
+        </div>
+        <div class="match-stats">
+          <div class="stat"><span class="stat-label">Prize Pool</span><span class="prize-pool">₹2,000</span></div>
+          <div class="stat"><span class="stat-label">Entry Fee</span><span class="stat-value">FREE</span></div>
+          <div class="stat"><span class="stat-label">Players</span><span class="stat-value green">18/50</span></div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:36%"></div></div>
+        <button class="join-btn" onclick="event.stopPropagation();openJoinModal('COD Mobile Blitz','₹2,000')">Join Match — FREE</button>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <button class="nav-item active" onclick="showScreen('home')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Home</button>
+      <button class="nav-item" onclick="showScreen('leaderboard')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M7 14H5v5h2v-5zm4-4H9v9h2v-9zm4-4h-2v13h2V6zm4-4h-2v17h2V2z"/></svg>Ranks</button>
+      <button class="nav-item" onclick="showScreen('spin')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>Spin</button>
+      <button class="nav-item" onclick="showScreen('wallet')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>Wallet</button>
+      <button class="nav-item" onclick="showScreen('profile')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Profile</button>
+    </div>
+  </div>
+
+  <!-- MATCH DETAIL SCREEN -->
+  <div class="screen" id="screen-match">
+    <div class="header">
+      <button onclick="showScreen('home')" style="background:none;border:none;color:#a78bfa;font-size:20px;cursor:pointer">←</button>
+      <div style="font-size:16px;font-weight:700;color:#e0e0ff">Match Details</div>
+      <div style="width:24px"></div>
+    </div>
+    <div class="scroll-area">
+      <div style="background:linear-gradient(135deg,#1a0a35,#0a1a35);border-radius:16px;padding:20px;margin-bottom:16px;border:1px solid #2a1a4a">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <div style="font-size:11px;color:#7c3aed;font-weight:700;letter-spacing:1px">FREE FIRE MAX</div>
+            <div style="font-size:20px;font-weight:900;color:#e0e0ff;margin:4px 0">Free Fire MAX Cup</div>
+            <span class="badge badge-live">● LIVE</span>
+          </div>
+          <div style="font-size:36px">🔥</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
+          <div style="background:#0d0d1a;border-radius:10px;padding:12px">
+            <div style="font-size:10px;color:#666">Prize Pool</div>
+            <div style="font-size:20px;font-weight:900;color:#f59e0b">₹10,000</div>
+          </div>
+          <div style="background:#0d0d1a;border-radius:10px;padding:12px">
+            <div style="font-size:10px;color:#666">Entry Fee</div>
+            <div style="font-size:20px;font-weight:900;color:#a78bfa">₹50</div>
+          </div>
+          <div style="background:#0d0d1a;border-radius:10px;padding:12px">
+            <div style="font-size:10px;color:#666">Players</div>
+            <div style="font-size:20px;font-weight:900;color:#10b981">87/100</div>
+          </div>
+          <div style="background:#0d0d1a;border-radius:10px;padding:12px">
+            <div style="font-size:10px;color:#666">Mode</div>
+            <div style="font-size:16px;font-weight:900;color:#e0e0ff">Squad</div>
+          </div>
+        </div>
+      </div>
+      <!-- Prize Distribution -->
+      <div class="section-title">🏆 Prize Distribution</div>
+      <div style="background:#12122a;border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid #1e1e3a">
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1e1e3a"><span style="color:#f59e0b">🥇 1st Place</span><span style="color:#f59e0b;font-weight:700">₹4,000</span></div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1e1e3a"><span style="color:#9ca3af">🥈 2nd Place</span><span style="color:#9ca3af;font-weight:700">₹2,500</span></div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1e1e3a"><span style="color:#cd7c2f">🥉 3rd Place</span><span style="color:#cd7c2f;font-weight:700">₹1,500</span></div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0"><span style="color:#666">4th–10th</span><span style="color:#666;font-weight:700">₹200 each</span></div>
+      </div>
+      <!-- Room Info -->
+      <div class="section-title">🔐 Room Credentials</div>
+      <div style="background:#12122a;border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid #1e1e3a;text-align:center">
+        <div style="font-size:12px;color:#666;margin-bottom:8px">Available 15 minutes before match</div>
+        <div style="background:#0d0d1a;border-radius:8px;padding:12px;margin-bottom:8px">
+          <div style="font-size:11px;color:#666">Room ID</div>
+          <div style="font-size:22px;font-weight:900;color:#a78bfa;letter-spacing:4px">8 8 4 2 1</div>
+        </div>
+        <div style="background:#0d0d1a;border-radius:8px;padding:12px">
+          <div style="font-size:11px;color:#666">Password</div>
+          <div style="font-size:22px;font-weight:900;color:#06b6d4;letter-spacing:4px">BZ2026</div>
+        </div>
+      </div>
+      <button class="join-btn live" onclick="openJoinModal('Free Fire MAX Cup','₹10,000')">Join This Match — ₹50</button>
+    </div>
+    <div class="bottom-nav">
+      <button class="nav-item" onclick="showScreen('home')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Home</button>
+      <button class="nav-item" onclick="showScreen('leaderboard')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M7 14H5v5h2v-5zm4-4H9v9h2v-9zm4-4h-2v13h2V6zm4-4h-2v17h2V2z"/></svg>Ranks</button>
+      <button class="nav-item" onclick="showScreen('spin')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>Spin</button>
+      <button class="nav-item" onclick="showScreen('wallet')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>Wallet</button>
+      <button class="nav-item" onclick="showScreen('profile')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Profile</button>
+    </div>
+  </div>
+
+  <!-- LEADERBOARD SCREEN -->
+  <div class="screen" id="screen-leaderboard">
+    <div class="header"><div class="header-logo">🏆 Leaderboard</div></div>
+    <div style="display:flex;gap:8px;padding:0 16px 12px">
+      <button onclick="filterLB(this,'all')" style="flex:1;padding:8px;border-radius:20px;border:1px solid #7c3aed;background:#7c3aed22;color:#a78bfa;font-size:12px;cursor:pointer">All Games</button>
+      <button onclick="filterLB(this,'bgmi')" style="flex:1;padding:8px;border-radius:20px;border:1px solid #2a2a4a;background:none;color:#666;font-size:12px;cursor:pointer">BGMI</button>
+      <button onclick="filterLB(this,'ff')" style="flex:1;padding:8px;border-radius:20px;border:1px solid #2a2a4a;background:none;color:#666;font-size:12px;cursor:pointer">Free Fire</button>
+    </div>
+    <div class="scroll-area" style="padding-top:0">
+      <div class="lb-row">
+        <div class="lb-rank rank-1">1</div>
+        <div class="lb-avatar">S</div>
+        <div class="lb-info"><div class="lb-name">SnipeKing99</div><div class="lb-pts">⚡ 12,450 pts • Diamond</div></div>
+        <div class="lb-earnings">₹8,200</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank rank-2">2</div>
+        <div class="lb-avatar" style="background:linear-gradient(135deg,#06b6d4,#0891b2)">R</div>
+        <div class="lb-info"><div class="lb-name">RushHour_X</div><div class="lb-pts">⚡ 11,200 pts • Platinum</div></div>
+        <div class="lb-earnings">₹5,500</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank rank-3">3</div>
+        <div class="lb-avatar" style="background:linear-gradient(135deg,#f59e0b,#d97706)">G</div>
+        <div class="lb-info"><div class="lb-name">GhostBlade</div><div class="lb-pts">⚡ 10,800 pts • Platinum</div></div>
+        <div class="lb-earnings">₹3,200</div>
+      </div>
+      <div class="lb-row"><div class="lb-rank rank-other">4</div><div class="lb-avatar" style="background:linear-gradient(135deg,#10b981,#059669)">P</div><div class="lb-info"><div class="lb-name">ProGamer_Z</div><div class="lb-pts">⚡ 9,600 pts • Gold</div></div><div class="lb-earnings">₹1,800</div></div>
+      <div class="lb-row"><div class="lb-rank rank-other">5</div><div class="lb-avatar" style="background:linear-gradient(135deg,#ef4444,#dc2626)">D</div><div class="lb-info"><div class="lb-name">DarkHunter</div><div class="lb-pts">⚡ 8,900 pts • Gold</div></div><div class="lb-earnings">₹1,200</div></div>
+      <div class="lb-row"><div class="lb-rank rank-other">6</div><div class="lb-avatar" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)">B</div><div class="lb-info"><div class="lb-name">BattleZone_B</div><div class="lb-pts">⚡ 8,100 pts • Gold</div></div><div class="lb-earnings">₹900</div></div>
+      <div class="lb-row"><div class="lb-rank rank-other">7</div><div class="lb-avatar" style="background:linear-gradient(135deg,#f97316,#ea580c)">N</div><div class="lb-info"><div class="lb-name">NightOwl_FF</div><div class="lb-pts">⚡ 7,400 pts • Silver</div></div><div class="lb-earnings">₹600</div></div>
+      <div class="lb-row"><div class="lb-rank rank-other">8</div><div class="lb-avatar" style="background:linear-gradient(135deg,#06b6d4,#7c3aed)">T</div><div class="lb-info"><div class="lb-name">TurboKill</div><div class="lb-pts">⚡ 6,800 pts • Silver</div></div><div class="lb-earnings">₹400</div></div>
+      <!-- My rank highlight -->
+      <div style="background:#1a0a35;border:1px solid #7c3aed44;border-radius:12px;padding:12px;margin-top:8px;text-align:center;font-size:12px;color:#a78bfa">
+        📍 Your Rank: <strong style="color:#f59e0b">#42</strong> — Keep playing to climb!
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <button class="nav-item" onclick="showScreen('home')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Home</button>
+      <button class="nav-item active" onclick="showScreen('leaderboard')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M7 14H5v5h2v-5zm4-4H9v9h2v-9zm4-4h-2v13h2V6zm4-4h-2v17h2V2z"/></svg>Ranks</button>
+      <button class="nav-item" onclick="showScreen('spin')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>Spin</button>
+      <button class="nav-item" onclick="showScreen('wallet')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>Wallet</button>
+      <button class="nav-item" onclick="showScreen('profile')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Profile</button>
+    </div>
+  </div>
+
+  <!-- SPIN WHEEL SCREEN -->
+  <div class="screen" id="screen-spin">
+    <div class="header"><div class="header-logo">🎰 Spin & Win</div></div>
+    <div class="scroll-area">
+      <div class="spin-container">
+        <div style="font-size:13px;color:#666;text-align:center">Spin daily for free rewards!</div>
+        <div class="wheel-wrap">
+          <div class="wheel-pointer"></div>
+          <canvas id="wheelCanvas" width="260" height="260"></canvas>
+        </div>
+        <button class="spin-btn" id="spinBtn" onclick="spinWheel()">🎰 SPIN!</button>
+        <div class="spin-cost">1 free spin daily • Extra spins: 10 coins each</div>
+      </div>
+      <div class="section-title" style="margin-top:8px">🎁 Possible Rewards</div>
+      <div class="prizes-grid">
+        <div class="prize-item"><div class="prize-icon">💰</div><div class="prize-name">₹50 Cash</div></div>
+        <div class="prize-item"><div class="prize-icon">⚡</div><div class="prize-name">100 XP</div></div>
+        <div class="prize-item"><div class="prize-icon">🎟️</div><div class="prize-name">Free Entry</div></div>
+        <div class="prize-item"><div class="prize-icon">💎</div><div class="prize-name">₹200 Cash</div></div>
+        <div class="prize-item"><div class="prize-icon">🔥</div><div class="prize-name">50 Coins</div></div>
+        <div class="prize-item"><div class="prize-icon">🏆</div><div class="prize-name">₹500 Cash</div></div>
+        <div class="prize-item"><div class="prize-icon">😢</div><div class="prize-name">Try Again</div></div>
+        <div class="prize-item"><div class="prize-icon">🎮</div><div class="prize-name">10 Coins</div></div>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <button class="nav-item" onclick="showScreen('home')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Home</button>
+      <button class="nav-item" onclick="showScreen('leaderboard')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M7 14H5v5h2v-5zm4-4H9v9h2v-9zm4-4h-2v13h2V6zm4-4h-2v17h2V2z"/></svg>Ranks</button>
+      <button class="nav-item active" onclick="showScreen('spin')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>Spin</button>
+      <button class="nav-item" onclick="showScreen('wallet')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>Wallet</button>
+      <button class="nav-item" onclick="showScreen('profile')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Profile</button>
+    </div>
+  </div>
+
+  <!-- WALLET SCREEN -->
+  <div class="screen" id="screen-wallet">
+    <div class="header"><div class="header-logo">💰 Wallet</div></div>
+    <div class="scroll-area">
+      <div class="wallet-card">
+        <div style="font-size:12px;color:#666;margin-bottom:4px">Total Balance</div>
+        <div class="wallet-balance">₹250.00</div>
+        <div style="display:flex;justify-content:center;gap:24px;margin-top:12px">
+          <div style="text-align:center"><div style="font-size:11px;color:#666">Cash</div><div style="font-size:16px;font-weight:700;color:#10b981">₹200</div></div>
+          <div style="width:1px;background:#1e1e3a"></div>
+          <div style="text-align:center"><div style="font-size:11px;color:#666">Bonus</div><div style="font-size:16px;font-weight:700;color:#f59e0b">₹50</div></div>
+        </div>
+        <div class="wallet-actions">
+          <button class="wallet-btn deposit" onclick="showModal('deposit-modal')">+ Add Money</button>
+          <button class="wallet-btn withdraw" onclick="showModal('withdraw-modal')">↑ Withdraw</button>
+        </div>
+      </div>
+      <div class="section-title">📋 Recent Transactions</div>
+      <div class="tx-row"><div class="tx-info"><div class="tx-title">🏆 Prize Won — BGMI Solo</div><div class="tx-date">Today, 2:30 PM</div></div><div class="tx-amount credit">+₹500</div></div>
+      <div class="tx-row"><div class="tx-info"><div class="tx-title">🎮 Entry Fee — FF MAX Cup</div><div class="tx-date">Today, 11:00 AM</div></div><div class="tx-amount debit">-₹50</div></div>
+      <div class="tx-row"><div class="tx-info"><div class="tx-title">💳 Wallet Deposit</div><div class="tx-date">Yesterday, 6:15 PM</div></div><div class="tx-amount credit">+₹200</div></div>
+      <div class="tx-row"><div class="tx-info"><div class="tx-title">🎰 Spin Reward</div><div class="tx-date">Yesterday, 3:00 PM</div></div><div class="tx-amount credit">+₹50</div></div>
+      <div class="tx-row"><div class="tx-info"><div class="tx-title">🎮 Entry Fee — COD Blitz</div><div class="tx-date">2 days ago</div></div><div class="tx-amount debit">-₹25</div></div>
+    </div>
+    <div class="bottom-nav">
+      <button class="nav-item" onclick="showScreen('home')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Home</button>
+      <button class="nav-item" onclick="showScreen('leaderboard')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M7 14H5v5h2v-5zm4-4H9v9h2v-9zm4-4h-2v13h2V6zm4-4h-2v17h2V2z"/></svg>Ranks</button>
+      <button class="nav-item" onclick="showScreen('spin')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>Spin</button>
+      <button class="nav-item active" onclick="showScreen('wallet')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>Wallet</button>
+      <button class="nav-item" onclick="showScreen('profile')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Profile</button>
+    </div>
+  </div>
+
+  <!-- PROFILE SCREEN -->
+  <div class="screen" id="screen-profile">
+    <div class="profile-header">
+      <div class="profile-avatar">B</div>
+      <div class="profile-name">BattleZone_B</div>
+      <div class="profile-tag">@battlezone_b • #BZ4821</div>
+      <div class="level-badge">⚡ Level 24 • Gold Tier</div>
+      <div style="background:#1a1a35;border-radius:8px;padding:6px 12px;margin-top:10px;font-size:11px;color:#666;display:inline-block">🔗 Referral: BZ4821 &nbsp;<span style="color:#7c3aed;cursor:pointer" onclick="showToast('Referral code copied!')">Copy</span></div>
+    </div>
+    <div class="scroll-area">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-card-value">47</div><div class="stat-card-label">Matches</div></div>
+        <div class="stat-card"><div class="stat-card-value" style="color:#f59e0b">12</div><div class="stat-card-label">Wins</div></div>
+        <div class="stat-card"><div class="stat-card-value" style="color:#10b981">₹2.4k</div><div class="stat-card-label">Earned</div></div>
+        <div class="stat-card"><div class="stat-card-value" style="color:#06b6d4">8,100</div><div class="stat-card-label">Rank Pts</div></div>
+        <div class="stat-card"><div class="stat-card-value" style="color:#ef4444">3.2</div><div class="stat-card-label">K/D Ratio</div></div>
+        <div class="stat-card"><div class="stat-card-value" style="color:#f59e0b">25.5%</div><div class="stat-card-label">Win Rate</div></div>
+      </div>
+      <!-- Achievements -->
+      <div class="section-title">🏅 Achievements</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+        <div style="background:#12122a;border:1px solid #f59e0b44;border-radius:10px;padding:10px 14px;text-align:center"><div style="font-size:24px">🏆</div><div style="font-size:10px;color:#f59e0b;margin-top:4px">First Win</div></div>
+        <div style="background:#12122a;border:1px solid #7c3aed44;border-radius:10px;padding:10px 14px;text-align:center"><div style="font-size:24px">🔥</div><div style="font-size:10px;color:#a78bfa;margin-top:4px">10 Streak</div></div>
+        <div style="background:#12122a;border:1px solid #06b6d444;border-radius:10px;padding:10px 14px;text-align:center"><div style="font-size:24px">💎</div><div style="font-size:10px;color:#06b6d4;margin-top:4px">Diamond</div></div>
+        <div style="background:#12122a;border:1px solid #10b98144;border-radius:10px;padding:10px 14px;text-align:center"><div style="font-size:24px">💰</div><div style="font-size:10px;color:#10b981;margin-top:4px">₹1k Earned</div></div>
+      </div>
+      <button onclick="showScreen('auth')" style="width:100%;padding:12px;border-radius:10px;border:1px solid #ff3b3b44;background:#ff3b3b11;color:#ff3b3b;font-weight:700;cursor:pointer">Sign Out</button>
+    </div>
+    <div class="bottom-nav">
+      <button class="nav-item" onclick="showScreen('home')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Home</button>
+      <button class="nav-item" onclick="showScreen('leaderboard')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M7 14H5v5h2v-5zm4-4H9v9h2v-9zm4-4h-2v13h2V6zm4-4h-2v17h2V2z"/></svg>Ranks</button>
+      <button class="nav-item" onclick="showScreen('spin')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>Spin</button>
+      <button class="nav-item" onclick="showScreen('wallet')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>Wallet</button>
+      <button class="nav-item active" onclick="showScreen('profile')"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Profile</button>
+    </div>
+  </div>
+
+  <!-- MODALS -->
+  <div class="modal-overlay" id="join-modal" onclick="closeModal('join-modal')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeModal('join-modal')">✕</button>
+      <div class="modal-title">⚔ Join Match</div>
+      <div style="font-size:14px;color:#a78bfa;margin-bottom:16px" id="join-match-name">Free Fire MAX Cup</div>
+      <input class="modal-input" placeholder="Enter your In-Game Name" id="ign-input">
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:#666;margin-bottom:12px"><span>Entry Fee</span><span style="color:#f59e0b;font-weight:700" id="join-fee">₹50</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:#666;margin-bottom:16px"><span>Wallet Balance</span><span style="color:#10b981;font-weight:700">₹250</span></div>
+      <button class="modal-btn" onclick="confirmJoin()">Confirm & Pay</button>
+    </div>
+  </div>
+  <div class="modal-overlay" id="deposit-modal" onclick="closeModal('deposit-modal')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeModal('deposit-modal')">✕</button>
+      <div class="modal-title">💳 Add Money</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button onclick="setAmount(100)" style="flex:1;padding:8px;border-radius:8px;border:1px solid #2a2a4a;background:#12122a;color:#a78bfa;cursor:pointer">₹100</button>
+        <button onclick="setAmount(200)" style="flex:1;padding:8px;border-radius:8px;border:1px solid #2a2a4a;background:#12122a;color:#a78bfa;cursor:pointer">₹200</button>
+        <button onclick="setAmount(500)" style="flex:1;padding:8px;border-radius:8px;border:1px solid #2a2a4a;background:#12122a;color:#a78bfa;cursor:pointer">₹500</button>
+      </div>
+      <input class="modal-input" type="number" placeholder="Enter amount (min ₹10)" id="deposit-amount">
+      <button class="modal-btn" onclick="showToast('Razorpay payment gateway opens here');closeModal('deposit-modal')">Pay via Razorpay</button>
+    </div>
+  </div>
+  <div class="modal-overlay" id="withdraw-modal" onclick="closeModal('withdraw-modal')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeModal('withdraw-modal')">✕</button>
+      <div class="modal-title">↑ Withdraw</div>
+      <input class="modal-input" type="number" placeholder="Amount (min ₹100)" id="withdraw-amount">
+      <input class="modal-input" placeholder="UPI ID (e.g. name@upi)" id="upi-input">
+      <button class="modal-btn" onclick="showToast('Withdrawal request submitted!');closeModal('withdraw-modal')">Request Withdrawal</button>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+// Screen navigation
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  if (name === 'spin') drawWheel();
+}
+
+// Toast
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// OTP
+function otpNext(el, idx) {
+  const boxes = document.querySelectorAll('.otp-box');
+  if (el.value && idx < 5) boxes[idx + 1].focus();
+}
+function sendOTP() {
+  const phone = document.getElementById('phone-input').value;
+  if (phone.length < 10) { showToast('Enter a valid 10-digit number'); return; }
+  showScreen('otp');
+  showToast('OTP sent to +91 ' + phone);
+}
+function verifyOTP() {
+  const boxes = document.querySelectorAll('.otp-box');
+  const otp = Array.from(boxes).map(b => b.value).join('');
+  if (otp.length < 6) { showToast('Enter complete OTP'); return; }
+  showToast('Welcome to BattleZone! 🎮');
+  setTimeout(() => showScreen('home'), 800);
+}
+
+// Join modal
+function openJoinModal(name, prize) {
+  document.getElementById('join-match-name').textContent = name + ' • Prize: ' + prize;
+  showModal('join-modal');
+}
+function confirmJoin() {
+  const ign = document.getElementById('ign-input').value;
+  if (!ign) { showToast('Enter your in-game name'); return; }
+  closeModal('join-modal');
+  showToast('Joined successfully! Good luck 🎮');
+}
+
+// Modals
+function showModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function setAmount(v) { document.getElementById('deposit-amount').value = v; }
+
+// Leaderboard filter
+function filterLB(btn, game) {
+  document.querySelectorAll('#screen-leaderboard button').forEach(b => {
+    b.style.background = 'none'; b.style.borderColor = '#2a2a4a'; b.style.color = '#666';
+  });
+  btn.style.background = '#7c3aed22'; btn.style.borderColor = '#7c3aed'; btn.style.color = '#a78bfa';
+  showToast('Showing: ' + (game === 'all' ? 'All Games' : game.toUpperCase()));
+}
+
+// Spin Wheel
+const segments = [
+  { label: '₹50', color: '#7c3aed' }, { label: '100 XP', color: '#06b6d4' },
+  { label: 'Free Entry', color: '#10b981' }, { label: '₹200', color: '#f59e0b' },
+  { label: '50 Coins', color: '#ef4444' }, { label: '₹500', color: '#8b5cf6' },
+  { label: 'Try Again', color: '#374151' }, { label: '10 Coins', color: '#0891b2' }
+];
+let spinning = false, currentAngle = 0;
+
+function drawWheel(angle) {
+  const canvas = document.getElementById('wheelCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const cx = 130, cy = 130, r = 126;
+  const arc = (2 * Math.PI) / segments.length;
+  ctx.clearRect(0, 0, 260, 260);
+  segments.forEach((seg, i) => {
+    const start = angle + i * arc;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, start, start + arc);
+    ctx.closePath();
+    ctx.fillStyle = seg.color;
+    ctx.fill();
+    ctx.strokeStyle = '#0d0d1a';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(start + arc / 2);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 12px Segoe UI';
+    ctx.fillText(seg.label, r - 10, 5);
+    ctx.restore();
+  });
+  // Center circle
+  ctx.beginPath();
+  ctx.arc(cx, cy, 24, 0, 2 * Math.PI);
+  ctx.fillStyle = '#0d0d1a';
+  ctx.fill();
+  ctx.strokeStyle = '#7c3aed';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 18px Segoe UI';
+  ctx.textAlign = 'center';
+  ctx.fillText('⚔', cx, cy + 6);
+}
+
+function spinWheel() {
+  if (spinning) return;
+  spinning = true;
+  document.getElementById('spinBtn').disabled = true;
+  const extraSpins = 5 + Math.random() * 5;
+  const targetAngle = currentAngle + extraSpins * 2 * Math.PI + Math.random() * 2 * Math.PI;
+  const duration = 3000;
+  const start = performance.now();
+  const startAngle = currentAngle;
+  function animate(now) {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const ease = 1 - Math.pow(1 - progress, 4);
+    currentAngle = startAngle + (targetAngle - startAngle) * ease;
+    drawWheel(currentAngle);
+    if (progress < 1) { requestAnimationFrame(animate); }
+    else {
+      spinning = false;
+      document.getElementById('spinBtn').disabled = false;
+      const arc = (2 * Math.PI) / segments.length;
+      const normalized = (((-currentAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI));
+      const idx = Math.floor(normalized / arc) % segments.length;
+      showToast('🎉 You won: ' + segments[idx].label + '!');
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
+// Init
+drawWheel(0);
+</script>
+</body>
+</html>
