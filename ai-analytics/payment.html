@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BattleZone — Payment</title>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0f;
+    color: #e0e0ff;
+    font-family: 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .card {
+    background: linear-gradient(135deg, #12122a, #1a1235);
+    border: 1px solid #2a1a4a;
+    border-radius: 20px;
+    padding: 32px;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 0 60px rgba(124,58,237,0.2);
+  }
+  .logo { font-size: 1.8rem; font-weight: 900; margin-bottom: 8px; }
+  .logo span { background: linear-gradient(135deg,#7c3aed,#06b6d4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  h2 { font-size: 1.4rem; font-weight: 800; color: white; margin-bottom: 24px; }
+  .row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #1e1e3a; font-size: 0.9rem; }
+  .row:last-child { border-bottom: none; }
+  .label { color: #6b7280; }
+  .value { font-weight: 600; color: #e0e0ff; }
+  .amount { font-size: 1.8rem; font-weight: 900; }
+  .summary { background: #0e0e1a; border-radius: 14px; padding: 16px; margin: 20px 0; }
+  .btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, #7c3aed, #5b21b6);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(124,58,237,0.5); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .secure { text-align: center; color: #4b5563; font-size: 0.75rem; margin-top: 12px; }
+  .success { display: none; text-align: center; padding: 20px; }
+  .success-icon { font-size: 4rem; margin-bottom: 16px; }
+  .success h3 { font-size: 1.5rem; font-weight: 900; color: #10b981; margin-bottom: 8px; }
+  .ticket {
+    background: #0e0e1a;
+    border: 2px dashed #2a2a4a;
+    border-radius: 14px;
+    padding: 16px;
+    margin: 16px 0;
+    font-size: 0.85rem;
+  }
+  .back-btn {
+    width: 100%;
+    padding: 12px;
+    background: transparent;
+    color: #7c3aed;
+    border: 1px solid #7c3aed;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 12px;
+  }
+  .prize-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 0.85rem; }
+  .prize-amount { color: #f59e0b; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">⚡ <span>BattleZone</span></div>
+  <p style="color:#6b7280;font-size:0.85rem;margin-bottom:24px">Esports Tournament Platform</p>
+
+  <!-- Payment form -->
+  <div id="payment-section">
+    <h2>💳 Confirm & Pay</h2>
+
+    <div class="summary" id="order-summary">
+      <!-- filled by JS -->
+    </div>
+
+    <div class="summary">
+      <div style="color:#6b7280;font-size:0.75rem;margin-bottom:10px">🏆 You Could Win</div>
+      <div id="prizes-display"></div>
+    </div>
+
+    <button class="btn" id="pay-btn" onclick="startPayment()">
+      🔒 Pay <span id="fee-display"></span> via Razorpay
+    </button>
+    <p class="secure">🛡️ Secured by Razorpay • UPI • Cards • Net Banking • Wallets</p>
+    <button class="back-btn" onclick="window.close()">← Go Back</button>
+  </div>
+
+  <!-- Success section -->
+  <div class="success" id="success-section">
+    <div class="success-icon">🎉</div>
+    <h3>Slot Confirmed!</h3>
+    <p style="color:#6b7280;margin-bottom:16px">Payment successful. You're registered!</p>
+
+    <div class="ticket" id="ticket-display"></div>
+
+    <p style="color:#4b5563;font-size:0.75rem;margin-top:12px">
+      🔐 Room ID will be sent to your phone 15 minutes before match start
+    </p>
+    <button class="back-btn" onclick="window.close()">Close & Return</button>
+  </div>
+</div>
+
+<script>
+  // Read params from URL
+  const params = new URLSearchParams(window.location.search)
+  const fee = parseInt(params.get('fee') || '25')
+  const tierName = params.get('tier') || 'Bronze Tier'
+  const game = params.get('game') || 'Free Fire MAX'
+  const mode = params.get('mode') || 'Squad'
+  const teamName = params.get('team') || 'Team Alpha'
+  const player1 = params.get('p1') || ''
+  const player2 = params.get('p2') || ''
+  const player3 = params.get('p3') || ''
+  const player4 = params.get('p4') || ''
+  const phone = params.get('phone') || ''
+  const email = params.get('email') || 'player@battlezone.gg'
+  const rzpKey = params.get('key') || 'rzp_test_SzDL5JiflVwNiq'
+
+  const tierColors = { '25': '#cd7f32', '50': '#c0c0c0', '100': '#ffd700' }
+  const tierPrizes = {
+    '25': [150, 90, 60],
+    '50': [300, 180, 120],
+    '100': [600, 360, 240],
+  }
+  const color = tierColors[String(fee)] || '#a855f7'
+  const prizes = tierPrizes[String(fee)] || [0,0,0]
+  const prizePool = prizes.reduce((a, b) => a + b, 0)
+
+  const players = [player1, player2, player3, player4].filter(Boolean).join(', ')
+
+  // Fill fee display
+  document.getElementById('fee-display').textContent = `₹${fee}`
+
+  // Fill order summary
+  document.getElementById('order-summary').innerHTML = `
+    <div class="row"><span class="label">Game</span><span class="value">${game}</span></div>
+    <div class="row"><span class="label">Mode</span><span class="value">${mode}</span></div>
+    <div class="row"><span class="label">Tier</span><span class="value" style="color:${color}">${tierName}</span></div>
+    <div class="row"><span class="label">Team</span><span class="value">${teamName}</span></div>
+    <div class="row"><span class="label">Players</span><span class="value" style="font-size:0.8rem">${players}</span></div>
+    <div class="row" style="margin-top:8px">
+      <span style="font-weight:700;color:#e0e0ff">Entry Fee</span>
+      <span class="amount" style="color:${color}">₹${fee}</span>
+    </div>
+  `
+
+  // Fill prizes
+  document.getElementById('prizes-display').innerHTML = `
+    <div style="color:#6b7280;font-size:0.75rem;margin-bottom:6px">Prize Pool: <span style="color:#f59e0b;font-weight:700">₹${prizePool}</span></div>
+    <div class="prize-row"><span>🥇 1st Place</span><span class="prize-amount">₹${prizes[0]}</span></div>
+    <div class="prize-row"><span>🥈 2nd Place</span><span class="prize-amount">₹${prizes[1]}</span></div>
+    <div class="prize-row"><span>🥉 3rd Place</span><span class="prize-amount">₹${prizes[2]}</span></div>
+  `
+
+  function startPayment() {
+    const btn = document.getElementById('pay-btn')
+    btn.disabled = true
+    btn.textContent = '⏳ Opening payment...'
+
+    const options = {
+      key: rzpKey,
+      amount: fee * 100,
+      currency: 'INR',
+      name: 'BattleZone Esports',
+      description: `${tierName} — ${game} ${mode}`,
+      prefill: { contact: phone, email: email },
+      notes: { team_name: teamName, game: game, mode: mode, tier: tierName },
+      theme: { color: color },
+      handler: function(response) {
+        showSuccess(response.razorpay_payment_id)
+      },
+      modal: {
+        ondismiss: function() {
+          btn.disabled = false
+          btn.innerHTML = `🔒 Pay ₹${fee} via Razorpay`
+        }
+      }
+    }
+
+    try {
+      const rzp = new Razorpay(options)
+      rzp.open()
+    } catch(e) {
+      btn.disabled = false
+      btn.innerHTML = `🔒 Pay ₹${fee} via Razorpay`
+      alert('Failed to open payment. Check your internet connection.')
+    }
+  }
+
+  function showSuccess(paymentId) {
+    document.getElementById('payment-section').style.display = 'none'
+    document.getElementById('success-section').style.display = 'block'
+
+    document.getElementById('ticket-display').innerHTML = `
+      <div style="color:#a855f7;font-size:0.7rem;font-weight:700;letter-spacing:2px;margin-bottom:12px">TOURNAMENT TICKET</div>
+      <div class="row"><span class="label">Game</span><span class="value">${game} ${mode}</span></div>
+      <div class="row"><span class="label">Tier</span><span class="value" style="color:${color}">${tierName}</span></div>
+      <div class="row"><span class="label">Team</span><span class="value">${teamName}</span></div>
+      <div class="row"><span class="label">Players</span><span class="value" style="font-size:0.8rem">${players}</span></div>
+      <div class="row"><span class="label">Entry Paid</span><span class="value" style="color:#10b981">₹${fee} ✅</span></div>
+      <div class="row"><span class="label">Prize Pool</span><span class="value" style="color:#f59e0b">₹${prizePool}</span></div>
+      <div style="color:#4b5563;font-size:0.7rem;margin-top:12px;text-align:center">Payment ID: ${paymentId}</div>
+    `
+  }
+</script>
+</body>
+</html>

@@ -568,58 +568,41 @@ elif page == "📝 Register for Tournament":
 
         st.divider()
 
-        # Razorpay button using HTML/JS
-        rzp_key = "rzp_test_your_key_here"
+        # Build payment URL with all registration data
+        import urllib.parse
+        rzp_key = "rzp_test_SzDL5JiflVwNiq"
+        base_url = "https://raw.githack.com/Om457-pixel/battlezone-esports/main/ai-analytics/payment.html"
+        params = urllib.parse.urlencode({
+            "fee": fee,
+            "tier": tier_name,
+            "game": d.get("game", ""),
+            "mode": d.get("mode", ""),
+            "team": d.get("team_name", ""),
+            "p1": d.get("player1", ""),
+            "p2": d.get("player2", ""),
+            "p3": d.get("player3", ""),
+            "p4": d.get("player4", ""),
+            "phone": d.get("phone", ""),
+            "email": d.get("email", ""),
+            "key": rzp_key,
+        })
+        payment_url = f"{base_url}?{params}"
+
         st.markdown(
-            f"""
-            <div style='text-align:center;padding:20px;'>
-                <div id='rzp-button-container'>
-                    <button onclick='openRazorpay()' style='
-                        background:linear-gradient(135deg,#7c3aed,#5b21b6);
-                        color:white;border:none;border-radius:12px;
-                        padding:16px 48px;font-size:1.1rem;font-weight:800;
-                        cursor:pointer;width:100%;max-width:400px;
-                        box-shadow:0 8px 25px rgba(124,58,237,0.4);
-                        transition:all 0.2s;'>
-                        🔒 Pay ₹{fee} via Razorpay
-                    </button>
-                </div>
-                <p style='color:#6b7280;font-size:0.75rem;margin-top:12px'>
-                    🛡️ Slot confirmed only after successful payment
-                </p>
-            </div>
-            <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-            <script>
-            function openRazorpay() {{
-                var options = {{
-                    key: '{rzp_key}',
-                    amount: {fee * 100},
-                    currency: 'INR',
-                    name: 'BattleZone Esports',
-                    description: '{tier_name} - {d.get("game", "")} {d.get("mode", "")}',
-                    prefill: {{
-                        contact: '{d.get("phone", "")}',
-                        email: '{d.get("email", "") or "player@battlezone.gg"}'
-                    }},
-                    notes: {{
-                        team_name: '{d.get("team_name", "")}',
-                        game: '{d.get("game", "")}',
-                        tier: '{tier_name}'
-                    }},
-                    theme: {{ color: '{color}' }},
-                    handler: function(response) {{
-                        document.getElementById('rzp-button-container').innerHTML =
-                            '<div style="color:#10b981;font-size:1.2rem;font-weight:700;padding:20px;">✅ Payment Successful! Payment ID: ' + response.razorpay_payment_id + '</div>';
-                        setTimeout(function() {{
-                            window.parent.postMessage({{type:'payment_success',payment_id:response.razorpay_payment_id}}, '*');
-                        }}, 1000);
-                    }}
-                }};
-                var rzp = new Razorpay(options);
-                rzp.open();
-            }}
-            </script>
-            """,
+            f"""<div style='text-align:center;padding:20px;'>
+            <a href="{payment_url}" target="_blank" style='
+                display:inline-block;
+                background:linear-gradient(135deg,#7c3aed,#5b21b6);
+                color:white;text-decoration:none;border-radius:12px;
+                padding:16px 48px;font-size:1.1rem;font-weight:800;
+                width:100%;max-width:400px;
+                box-shadow:0 8px 25px rgba(124,58,237,0.4);'>
+                🔒 Pay ₹{fee} via Razorpay
+            </a>
+            <p style='color:#6b7280;font-size:0.75rem;margin-top:12px'>
+                Opens secure payment page in new tab
+            </p>
+            </div>""",
             unsafe_allow_html=True
         )
 
