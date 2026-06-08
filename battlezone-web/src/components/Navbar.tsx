@@ -18,6 +18,7 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-6">
           <Link href="/tournaments" className="text-sm text-gray-400 hover:text-purple-400 transition-colors">Tournaments</Link>
           <Link href="/leaderboard" className="text-sm text-gray-400 hover:text-purple-400 transition-colors">Leaderboard</Link>
+          <Link href="/admin" className="text-sm text-gray-400 hover:text-purple-400 transition-colors">Admin</Link>
           <Link href="/live" className="text-sm text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors">
             <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />Live
           </Link>
