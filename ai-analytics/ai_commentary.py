@@ -95,3 +95,44 @@ Focus on the most interesting numbers. Write only the summary."""
         return response.choices[0].message.content.strip()
     except Exception as e:
         return "🏆 The tournament has been action-packed with incredible performances across all games!"
+
+
+def chat_with_data(question: str, players_df, results_df) -> str:
+    """Answer any question about the tournament data using AI."""
+    import pandas as pd
+
+    # Build a compact data summary to give the AI context
+    top_players = players_df.nlargest(10, "rank_points")[
+        ["username", "rank_tier", "rank_points", "win_rate", "total_kills", "matches_played", "total_earnings"]
+    ].to_string(index=False)
+
+    game_summary = ""
+    if not results_df.empty:
+        game_summary = results_df.groupby("game").agg(
+            total_kills=("kills", "sum"),
+            avg_kills=("kills", "mean"),
+            matches=("match_id", "nunique")
+        ).round(2).to_string()
+
+    prompt = f"""You are an AI analyst for BattleZone, an esports tournament platform.
+Answer the user's question using ONLY the data provided. Be direct and specific.
+If the answer involves numbers, include them. Keep it to 2-3 sentences max.
+
+Top 10 Players by Rank Points:
+{top_players}
+
+Game Stats:
+{game_summary if game_summary else "No match data"}
+
+User question: {question}"""
+
+    try:
+        response = _get_client().chat.completions.create(
+            model="llama3-8b-8192",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=200,
+            temperature=0.5,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        return f"Couldn't fetch answer right now. Error: {str(e)}"

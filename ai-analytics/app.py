@@ -3,7 +3,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 from analytics import load_data, top_players, game_stats, player_performance, predict_win_probability, tier_distribution
-from ai_commentary import generate_match_commentary, generate_player_insight, generate_tournament_summary
+from ai_commentary import generate_match_commentary, generate_player_insight, generate_tournament_summary, chat_with_data
 
 # ── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -18,13 +18,6 @@ st.markdown("""
 <style>
     .main { background-color: #0e0e1a; }
     .stApp { background: linear-gradient(135deg, #0e0e1a 0%, #1a0a2e 100%); }
-    .metric-card {
-        background: linear-gradient(135deg, #1e1e3a, #2a1a4e);
-        border: 1px solid #6c3fc5;
-        border-radius: 12px;
-        padding: 20px;
-        text-align: center;
-    }
     .neon-title {
         color: #a855f7;
         text-shadow: 0 0 20px #a855f7;
@@ -39,11 +32,42 @@ st.markdown("""
         font-style: italic;
         color: #e2d9f3;
     }
+    .vs-box {
+        background: linear-gradient(135deg, #1e1e3a, #2a1a4e);
+        border: 2px solid #a855f7;
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+    }
+    .win-badge {
+        background: linear-gradient(135deg, #a855f7, #7c3aed);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 0.8rem;
+    }
     div[data-testid="metric-container"] {
         background: linear-gradient(135deg, #1e1e3a, #2a1a4e);
         border: 1px solid #6c3fc5;
         border-radius: 10px;
         padding: 10px;
+    }
+    .chat-msg-user {
+        background: #2a1a4e;
+        border-radius: 12px 12px 2px 12px;
+        padding: 10px 14px;
+        margin: 6px 0;
+        color: #e2d9f3;
+        text-align: right;
+    }
+    .chat-msg-ai {
+        background: #1a0a2e;
+        border-left: 3px solid #a855f7;
+        border-radius: 2px 12px 12px 12px;
+        padding: 10px 14px;
+        margin: 6px 0;
+        color: #e2d9f3;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -62,7 +86,7 @@ with st.sidebar:
     st.divider()
 
     if is_demo:
-        st.warning("⚡ Demo mode — sample data. Connect MongoDB for live data.")
+        st.warning("⚡ Demo mode — sample data.")
     else:
         st.success("✅ Live data connected")
 
@@ -71,6 +95,11 @@ with st.sidebar:
         "🏠 Overview",
         "🏆 Leaderboard",
         "🔍 Player Scout",
+        "⚔️ PvP Comparison",
+        "🔮 Match Prediction",
+        "🔥 Kill Heatmap",
+        "📈 Streak Tracker",
+        "💬 Chat with Data",
         "🎙️ AI Commentary",
     ])
     st.divider()
@@ -82,7 +111,6 @@ if page == "🏠 Overview":
     st.caption("Real-time esports intelligence powered by AI")
     st.divider()
 
-    # KPI row
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("👥 Total Players", len(players_df))
     col2.metric("🎮 Matches Played", results_df["match_id"].nunique() if not results_df.empty else 0)
@@ -97,8 +125,7 @@ if page == "🏠 Overview":
         tier_df = tier_distribution(players_df)
         colors = ["#cd7f32","#c0c0c0","#ffd700","#00c8ff","#b9f2ff","#ff6ef7","#ff4444"]
         fig = px.bar(tier_df, x="tier", y="count", color="tier",
-                     color_discrete_sequence=colors,
-                     template="plotly_dark")
+                     color_discrete_sequence=colors, template="plotly_dark")
         fig.update_layout(showlegend=False, plot_bgcolor="rgba(0,0,0,0)",
                           paper_bgcolor="rgba(0,0,0,0)", margin=dict(t=10))
         st.plotly_chart(fig, use_container_width=True)
@@ -115,13 +142,11 @@ if page == "🏠 Overview":
         else:
             st.info("No match result data yet.")
 
-    # Game stats table
     st.subheader("📊 Game Performance Stats")
     gstats = game_stats(results_df)
     if not gstats.empty:
         st.dataframe(gstats, use_container_width=True)
 
-    # AI Tournament Summary
     st.subheader("🤖 AI Tournament Summary")
     if st.button("Generate AI Summary", type="primary"):
         with st.spinner("AI is analysing the tournament..."):
@@ -142,16 +167,13 @@ elif page == "🏆 Leaderboard":
 
     top_df = top_players(players_df, n=top_n, sort_by=sort_by)
 
-    # Medal emojis for top 3
     def medal(i):
         return ["🥇", "🥈", "🥉"][i] if i < 3 else f"#{i+1}"
 
     top_df.insert(0, "Rank", [medal(i) for i in range(len(top_df))])
-
     st.dataframe(
         top_df[["Rank", "username", "rank_tier", "rank_points", "win_rate", "total_kills", "total_earnings", "level"]],
-        use_container_width=True,
-        hide_index=True,
+        use_container_width=True, hide_index=True,
     )
 
     st.divider()
@@ -179,7 +201,6 @@ elif page == "🔍 Player Scout":
         perf = player_performance(results_df, selected)
         win_prob = predict_win_probability(players_df, selected)
 
-        # Stats row
         col1, col2, col3, col4, col5 = st.columns(5)
         col1.metric("🎖️ Tier", player_row["rank_tier"])
         col2.metric("⭐ Level", int(player_row["level"]))
@@ -188,7 +209,6 @@ elif page == "🔍 Player Scout":
         col5.metric("🎯 Win Probability", f"{win_prob}%" if win_prob else "N/A")
 
         st.divider()
-
         col_l, col_r = st.columns(2)
 
         with col_l:
@@ -203,7 +223,6 @@ elif page == "🔍 Player Scout":
                 st.info("No match history found for this player.")
 
         with col_r:
-            # Win probability gauge
             st.subheader("🎯 Win Probability Gauge")
             fig = go.Figure(go.Indicator(
                 mode="gauge+number",
@@ -221,15 +240,10 @@ elif page == "🔍 Player Scout":
                     "threshold": {"line": {"color": "#ff6ef7", "width": 3}, "value": win_prob or 0}
                 }
             ))
-            fig.update_layout(
-                paper_bgcolor="rgba(0,0,0,0)",
-                font={"color": "#e2d9f3"},
-                height=280,
-                margin=dict(t=20, b=20)
-            )
+            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font={"color": "#e2d9f3"},
+                              height=280, margin=dict(t=20, b=20))
             st.plotly_chart(fig, use_container_width=True)
 
-        # AI Insight
         st.divider()
         st.subheader("🤖 AI Player Insight")
         if st.button("Generate AI Insight", type="primary"):
@@ -240,7 +254,6 @@ elif page == "🔍 Player Scout":
             else:
                 st.warning("Need match history to generate insight.")
 
-        # Kill distribution chart
         if perf and not results_df.empty:
             st.divider()
             st.subheader("⚔️ Kill Distribution Across Matches")
@@ -252,6 +265,337 @@ elif page == "🔍 Player Scout":
                                    xaxis_title="Match", yaxis_title="Kills")
                 st.plotly_chart(fig2, use_container_width=True)
 
+# ── PVP COMPARISON ────────────────────────────────────────────────────────────
+elif page == "⚔️ PvP Comparison":
+    st.markdown('<p class="neon-title">⚔️ Player vs Player</p>', unsafe_allow_html=True)
+    st.caption("Head-to-head stats comparison with AI verdict")
+    st.divider()
+
+    usernames = sorted(players_df["username"].tolist())
+    col1, col_vs, col2 = st.columns([2, 1, 2])
+    with col1:
+        p1 = st.selectbox("🔵 Player 1", usernames, index=0)
+    with col_vs:
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        st.markdown('<div style="text-align:center;font-size:2rem;color:#a855f7;font-weight:900">VS</div>', unsafe_allow_html=True)
+    with col2:
+        p2 = st.selectbox("🔴 Player 2", usernames, index=1)
+
+    if p1 == p2:
+        st.warning("Select two different players!")
+    else:
+        r1 = players_df[players_df["username"] == p1].iloc[0]
+        r2 = players_df[players_df["username"] == p2].iloc[0]
+        perf1 = player_performance(results_df, p1)
+        perf2 = player_performance(results_df, p2)
+        prob1 = predict_win_probability(players_df, p1) or 0
+        prob2 = predict_win_probability(players_df, p2) or 0
+
+        st.divider()
+
+        # Side by side stats
+        metrics = [
+            ("🏆 Rank Points", int(r1["rank_points"]), int(r2["rank_points"])),
+            ("📊 Win Rate %", r1["win_rate"], r2["win_rate"]),
+            ("⚔️ Total Kills", int(r1["total_kills"]), int(r2["total_kills"])),
+            ("🎮 Matches Played", int(r1["matches_played"]), int(r2["matches_played"])),
+            ("⭐ Level", int(r1["level"]), int(r2["level"])),
+            ("🎯 Win Probability", prob1, prob2),
+        ]
+
+        for label, v1, v2 in metrics:
+            c1, cm, c2 = st.columns([2, 1, 2])
+            winner_side = "left" if v1 > v2 else ("right" if v2 > v1 else "tie")
+            with c1:
+                badge = "🏅" if winner_side == "left" else ""
+                st.metric(f"{p1} {badge}", v1)
+            with cm:
+                st.markdown(f"<div style='text-align:center;padding-top:20px;color:#6b7280;font-size:0.85rem'>{label}</div>", unsafe_allow_html=True)
+            with c2:
+                badge = "🏅" if winner_side == "right" else ""
+                st.metric(f"{p2} {badge}", v2)
+
+        # Radar chart
+        st.divider()
+        st.subheader("📡 Stat Radar")
+        max_rp = players_df["rank_points"].max() or 1
+        max_kills = players_df["total_kills"].max() or 1
+        max_matches = players_df["matches_played"].max() or 1
+
+        categories = ["Win Rate", "Rank Points", "Kills", "Matches", "Win Prob"]
+        vals1 = [
+            r1["win_rate"],
+            r1["rank_points"] / max_rp * 100,
+            r1["total_kills"] / max_kills * 100,
+            r1["matches_played"] / max_matches * 100,
+            prob1,
+        ]
+        vals2 = [
+            r2["win_rate"],
+            r2["rank_points"] / max_rp * 100,
+            r2["total_kills"] / max_kills * 100,
+            r2["matches_played"] / max_matches * 100,
+            prob2,
+        ]
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatterpolar(r=vals1 + [vals1[0]], theta=categories + [categories[0]],
+                                      fill='toself', name=p1, line_color="#a855f7"))
+        fig.add_trace(go.Scatterpolar(r=vals2 + [vals2[0]], theta=categories + [categories[0]],
+                                      fill='toself', name=p2, line_color="#f43f5e"))
+        fig.update_layout(polar=dict(bgcolor="#1e1e3a",
+                          radialaxis=dict(visible=True, range=[0, 100], color="#6b7280")),
+                          paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#e2d9f3"),
+                          legend=dict(bgcolor="rgba(0,0,0,0)"))
+        st.plotly_chart(fig, use_container_width=True)
+
+        # AI verdict
+        st.divider()
+        st.subheader("🤖 AI Verdict")
+        if st.button("Who would win? Ask AI", type="primary"):
+            prompt_data = {
+                p1: {"rank_points": int(r1["rank_points"]), "win_rate": r1["win_rate"],
+                     "total_kills": int(r1["total_kills"]), "win_probability": prob1,
+                     "rank_tier": r1["rank_tier"]},
+                p2: {"rank_points": int(r2["rank_points"]), "win_rate": r2["win_rate"],
+                     "total_kills": int(r2["total_kills"]), "win_probability": prob2,
+                     "rank_tier": r2["rank_tier"]},
+            }
+            with st.spinner("AI is analysing the matchup..."):
+                verdict = chat_with_data(
+                    f"Compare these two esports players and predict who would win in a 1v1 match. Be confident, pick a winner, explain why in 3 sentences max. Stats: {prompt_data}",
+                    players_df, results_df
+                )
+            st.markdown(f'<div class="commentary-box">🤖 {verdict}</div>', unsafe_allow_html=True)
+
+# ── MATCH PREDICTION ──────────────────────────────────────────────────────────
+elif page == "🔮 Match Prediction":
+    st.markdown('<p class="neon-title">🔮 Match Prediction</p>', unsafe_allow_html=True)
+    st.caption("AI predicts match outcome before it happens")
+    st.divider()
+
+    usernames = sorted(players_df["username"].tolist())
+    games = ["Free Fire MAX", "PUBG Mobile", "Call of Duty Mobile", "BGMI"]
+
+    col1, col2 = st.columns(2)
+    with col1:
+        game = st.selectbox("Game", games)
+        selected_players = st.multiselect("Select players (pick 4-10)", usernames,
+                                           default=usernames[:6])
+    with col2:
+        prize_pool = st.number_input("Prize Pool (₹)", min_value=100, value=5000, step=500)
+        st.markdown("**Selected players:**")
+        if selected_players:
+            for p in selected_players:
+                row = players_df[players_df["username"] == p]
+                if not row.empty:
+                    tier = row.iloc[0]["rank_tier"]
+                    prob = predict_win_probability(players_df, p) or 0
+                    st.markdown(f"• **{p}** — {tier} — {prob}% win chance")
+
+    st.divider()
+    if st.button("🔮 Predict Match", type="primary", use_container_width=True):
+        if len(selected_players) < 2:
+            st.warning("Select at least 2 players!")
+        else:
+            player_stats = {}
+            for p in selected_players:
+                row = players_df[players_df["username"] == p]
+                if not row.empty:
+                    player_stats[p] = {
+                        "rank_tier": row.iloc[0]["rank_tier"],
+                        "win_rate": row.iloc[0]["win_rate"],
+                        "rank_points": int(row.iloc[0]["rank_points"]),
+                        "win_probability": predict_win_probability(players_df, p) or 0,
+                    }
+
+            # Show probability bars
+            st.subheader("📊 Win Probability per Player")
+            prob_df = pd.DataFrame([
+                {"Player": p, "Win Probability %": s["win_probability"], "Tier": s["rank_tier"]}
+                for p, s in player_stats.items()
+            ]).sort_values("Win Probability %", ascending=False)
+
+            fig = px.bar(prob_df, x="Player", y="Win Probability %", color="Tier",
+                         template="plotly_dark",
+                         color_discrete_map={
+                             "Bronze":"#cd7f32","Silver":"#c0c0c0","Gold":"#ffd700",
+                             "Platinum":"#00c8ff","Diamond":"#b9f2ff","Master":"#ff6ef7","Legend":"#ff4444"
+                         })
+            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+            st.plotly_chart(fig, use_container_width=True)
+
+            with st.spinner("AI is predicting the match..."):
+                prediction = chat_with_data(
+                    f"Predict the outcome of a {game} match with these players. Pick a winner and top 3. Be specific and hype. Stats: {player_stats}. Prize Pool: ₹{prize_pool}",
+                    players_df, results_df
+                )
+            st.markdown(f'<div class="commentary-box">🔮 {prediction}</div>', unsafe_allow_html=True)
+
+# ── KILL HEATMAP ──────────────────────────────────────────────────────────────
+elif page == "🔥 Kill Heatmap":
+    st.markdown('<p class="neon-title">🔥 Kill Heatmap</p>', unsafe_allow_html=True)
+    st.caption("Who dominates which game")
+    st.divider()
+
+    if results_df.empty:
+        st.info("No match data available.")
+    else:
+        top_n = st.slider("Show top N players", 5, 15, 10)
+        top_usernames = players_df.nlargest(top_n, "total_kills")["username"].tolist()
+        filtered = results_df[results_df["username"].isin(top_usernames)]
+
+        if not filtered.empty:
+            heatmap_df = filtered.groupby(["username", "game"])["kills"].sum().reset_index()
+            pivot = heatmap_df.pivot(index="username", columns="game", values="kills").fillna(0)
+
+            fig = px.imshow(pivot, color_continuous_scale="Purples",
+                            template="plotly_dark", aspect="auto",
+                            labels=dict(x="Game", y="Player", color="Total Kills"))
+            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                              margin=dict(t=30))
+            st.plotly_chart(fig, use_container_width=True)
+
+            st.divider()
+            st.subheader("🏆 Top Killer per Game")
+            cols = st.columns(len(pivot.columns))
+            for i, game in enumerate(pivot.columns):
+                top_killer = pivot[game].idxmax()
+                kills = int(pivot[game].max())
+                with cols[i]:
+                    st.metric(game, top_killer, f"{kills} kills")
+
+# ── STREAK TRACKER ────────────────────────────────────────────────────────────
+elif page == "📈 Streak Tracker":
+    st.markdown('<p class="neon-title">📈 Streak & Form</p>', unsafe_allow_html=True)
+    st.caption("Player momentum — who's hot and who's cold")
+    st.divider()
+
+    if results_df.empty:
+        st.info("No match data available.")
+    else:
+        usernames = sorted(players_df["username"].tolist())
+        selected = st.selectbox("Select player", usernames)
+
+        player_matches = results_df[results_df["username"] == selected].copy()
+
+        if player_matches.empty:
+            st.info("No match history for this player.")
+        else:
+            player_matches = player_matches.reset_index(drop=True)
+            player_matches["match_num"] = range(1, len(player_matches) + 1)
+            player_matches["won"] = (player_matches["rank"] == 1).astype(int)
+            player_matches["rolling_kills"] = player_matches["kills"].rolling(3, min_periods=1).mean().round(2)
+
+            col1, col2, col3 = st.columns(3)
+            recent = player_matches.tail(5)
+            wins_recent = int(recent["won"].sum())
+            avg_kills_recent = round(recent["kills"].mean(), 1)
+            best_streak = 0
+            cur = 0
+            for w in player_matches["won"]:
+                cur = cur + 1 if w else 0
+                best_streak = max(best_streak, cur)
+
+            col1.metric("🔥 Recent Wins (last 5)", f"{wins_recent}/5")
+            col2.metric("⚔️ Avg Kills (last 5)", avg_kills_recent)
+            col3.metric("🏆 Best Win Streak", best_streak)
+
+            st.divider()
+            col_l, col_r = st.columns(2)
+
+            with col_l:
+                st.subheader("📊 Kill Trend")
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=player_matches["match_num"], y=player_matches["kills"],
+                                         mode="markers+lines", name="Kills", line_color="#a855f7",
+                                         marker=dict(size=8)))
+                fig.add_trace(go.Scatter(x=player_matches["match_num"], y=player_matches["rolling_kills"],
+                                         mode="lines", name="3-match avg", line=dict(color="#f43f5e", dash="dash")))
+                fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                                  template="plotly_dark", xaxis_title="Match #", yaxis_title="Kills")
+                st.plotly_chart(fig, use_container_width=True)
+
+            with col_r:
+                st.subheader("🏅 Rank Trend")
+                fig2 = go.Figure()
+                fig2.add_trace(go.Scatter(x=player_matches["match_num"], y=player_matches["rank"],
+                                          mode="markers+lines", name="Rank", line_color="#00c8ff",
+                                          marker=dict(size=8)))
+                fig2.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                                   template="plotly_dark", xaxis_title="Match #", yaxis_title="Rank",
+                                   yaxis=dict(autorange="reversed"))
+                st.plotly_chart(fig2, use_container_width=True)
+
+            # Form indicator
+            st.divider()
+            st.subheader("🌡️ Current Form")
+            form_icons = []
+            for _, row in player_matches.tail(5).iterrows():
+                if row["rank"] == 1:
+                    form_icons.append("🟢 W")
+                elif row["rank"] <= 3:
+                    form_icons.append("🟡 T")
+                else:
+                    form_icons.append("🔴 L")
+            st.markdown("**Last 5 matches:** " + "  →  ".join(form_icons))
+
+# ── CHAT WITH DATA ────────────────────────────────────────────────────────────
+elif page == "💬 Chat with Data":
+    st.markdown('<p class="neon-title">💬 Chat with Data</p>', unsafe_allow_html=True)
+    st.caption("Ask anything about your tournament data")
+    st.divider()
+
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+
+    # Example questions
+    st.markdown("**Try asking:**")
+    examples = [
+        "Who has the best KD ratio?",
+        "Which game has the most kills?",
+        "Who is the top earner?",
+        "Which player is on the best form?",
+        "Who should I watch out for in PUBG Mobile?",
+    ]
+    cols = st.columns(len(examples))
+    for i, ex in enumerate(examples):
+        if cols[i].button(ex, key=f"ex_{i}"):
+            st.session_state.chat_history.append({"role": "user", "content": ex})
+            with st.spinner("Thinking..."):
+                answer = chat_with_data(ex, players_df, results_df)
+            st.session_state.chat_history.append({"role": "ai", "content": answer})
+
+    st.divider()
+
+    # Chat history
+    for msg in st.session_state.chat_history:
+        if msg["role"] == "user":
+            st.markdown(f'<div class="chat-msg-user">🧑 {msg["content"]}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div class="chat-msg-ai">🤖 {msg["content"]}</div>', unsafe_allow_html=True)
+
+    # Input
+    with st.form("chat_form", clear_on_submit=True):
+        col1, col2 = st.columns([5, 1])
+        with col1:
+            user_input = st.text_input("Ask about your data...", label_visibility="collapsed",
+                                        placeholder="e.g. Who has the highest win rate in BGMI?")
+        with col2:
+            submitted = st.form_submit_button("Send 🚀", use_container_width=True)
+
+    if submitted and user_input:
+        st.session_state.chat_history.append({"role": "user", "content": user_input})
+        with st.spinner("AI is thinking..."):
+            answer = chat_with_data(user_input, players_df, results_df)
+        st.session_state.chat_history.append({"role": "ai", "content": answer})
+        st.rerun()
+
+    if st.session_state.chat_history:
+        if st.button("🗑️ Clear chat"):
+            st.session_state.chat_history = []
+            st.rerun()
+
 # ── AI COMMENTARY ─────────────────────────────────────────────────────────────
 elif page == "🎙️ AI Commentary":
     st.markdown('<p class="neon-title">🎙️ AI Match Commentary</p>', unsafe_allow_html=True)
@@ -259,7 +603,6 @@ elif page == "🎙️ AI Commentary":
     st.divider()
 
     games = ["Free Fire MAX", "PUBG Mobile", "Call of Duty Mobile", "BGMI"]
-
     col1, col2 = st.columns(2)
     with col1:
         game = st.selectbox("Game", games)
@@ -278,17 +621,14 @@ elif page == "🎙️ AI Commentary":
             with c2:
                 p_kills = st.number_input("Kills", 0, 30, max(0, winner_kills - i*2), key=f"k{i}")
             with c3:
-                st.write("")  # spacer
+                st.write("")
             top_players_input.append({"rank": i, "username": p_name, "kills": p_kills})
 
     st.divider()
     if st.button("🎙️ Generate Commentary", type="primary", use_container_width=True):
         match_data = {
-            "game": game,
-            "winner": winner,
-            "winner_kills": winner_kills,
-            "prize_pool": prize_pool,
-            "top_players": top_players_input,
+            "game": game, "winner": winner, "winner_kills": winner_kills,
+            "prize_pool": prize_pool, "top_players": top_players_input,
         }
         with st.spinner("AI is cooking up some hype..."):
             commentary = generate_match_commentary(match_data)
