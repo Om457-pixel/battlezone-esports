@@ -571,7 +571,7 @@ elif page == "📝 Register for Tournament":
         # Build payment URL with all registration data
         import urllib.parse
         rzp_key = "rzp_test_SzDL5JiflVwNiq"
-        base_url = "https://raw.githack.com/Om457-pixel/battlezone-esports/main/ai-analytics/payment.html"
+        base_url = "http://localhost:3000/pay"
         params = urllib.parse.urlencode({
             "fee": fee,
             "tier": tier_name,
