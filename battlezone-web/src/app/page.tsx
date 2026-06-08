@@ -35,8 +35,11 @@ export default function Home() {
             <Link href="/tournaments" className="btn-primary px-8 py-3 text-base">
               🎮 Browse Tournaments
             </Link>
+            <Link href="/join" className="btn-primary px-8 py-3 text-base" style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)' }}>
+              ⚡ Join Tournament
+            </Link>
             <Link href="/auth" className="px-8 py-3 text-base rounded-xl border border-purple-600 text-purple-400 hover:bg-purple-900/20 transition-colors">
-              Join Free →
+              Sign Up Free →
             </Link>
           </div>
         </div>

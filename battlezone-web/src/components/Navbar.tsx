@@ -17,6 +17,7 @@ export default function Navbar() {
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-6">
           <Link href="/tournaments" className="text-sm text-gray-400 hover:text-purple-400 transition-colors">Tournaments</Link>
+          <Link href="/join" className="text-sm font-bold text-purple-400 hover:text-purple-300 border border-purple-700 rounded-full px-3 py-1 transition-colors">⚡ Join Now</Link>
           <Link href="/leaderboard" className="text-sm text-gray-400 hover:text-purple-400 transition-colors">Leaderboard</Link>
           <Link href="/admin" className="text-sm text-gray-400 hover:text-purple-400 transition-colors">Admin</Link>
           <Link href="/live" className="text-sm text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors">
