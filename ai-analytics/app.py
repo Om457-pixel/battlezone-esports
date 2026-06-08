@@ -94,6 +94,7 @@ with st.sidebar:
     page = st.radio("Navigate", [
         "🏠 Overview",
         "🔴 Live Tournament",
+        "📝 Register for Tournament",
         "🏆 Leaderboard",
         "🔍 Player Scout",
         "⚔️ PvP Comparison",
@@ -335,6 +336,358 @@ elif page == "🔴 Live Tournament":
         if auto_refresh:
             time.sleep(30)
             st.rerun()
+
+# ── REGISTER FOR TOURNAMENT ───────────────────────────────────────────────────
+elif page == "📝 Register for Tournament":
+    st.markdown('<p class="neon-title">📝 Register for Tournament</p>', unsafe_allow_html=True)
+    st.caption("Pick your game, choose a tier, register your team and pay entry fee")
+    st.divider()
+
+    TIERS = {
+        "🔰 Bronze — ₹25": {"fee": 25, "pool": 300, "prizes": [150, 90, 60], "color": "#cd7f32"},
+        "⚔️ Silver — ₹50": {"fee": 50, "pool": 600, "prizes": [300, 180, 120], "color": "#c0c0c0"},
+        "👑 Gold — ₹100":  {"fee": 100, "pool": 1200, "prizes": [600, 360, 240], "color": "#ffd700"},
+    }
+    GAMES = ["Free Fire MAX", "PUBG Mobile", "Call of Duty Mobile", "BGMI"]
+    MODES = ["Solo", "Duo", "Squad"]
+
+    # ── Step tracker ──────────────────────────────────────────────────────────
+    if "reg_step" not in st.session_state:
+        st.session_state.reg_step = 1
+        st.session_state.reg_data = {}
+
+    step = st.session_state.reg_step
+
+    # Progress bar
+    progress_labels = ["1. Select Game", "2. Choose Tier", "3. Team Details", "4. Payment", "5. Confirmed"]
+    cols = st.columns(5)
+    for i, label in enumerate(progress_labels):
+        with cols[i]:
+            if i + 1 < step:
+                st.markdown(f"<div style='text-align:center;color:#7c3aed;font-size:0.75rem;font-weight:700'>✅ {label}</div>", unsafe_allow_html=True)
+            elif i + 1 == step:
+                st.markdown(f"<div style='text-align:center;color:#a855f7;font-size:0.75rem;font-weight:800;text-shadow:0 0 10px #a855f7'>{label}</div>", unsafe_allow_html=True)
+            else:
+                st.markdown(f"<div style='text-align:center;color:#374151;font-size:0.75rem'>{label}</div>", unsafe_allow_html=True)
+
+    st.progress((step - 1) / 4)
+    st.divider()
+
+    # ── STEP 1: Select Game ───────────────────────────────────────────────────
+    if step == 1:
+        st.subheader("🎮 Select Your Game")
+        game_emojis = {"Free Fire MAX": "🔥", "PUBG Mobile": "🎯", "Call of Duty Mobile": "💥", "BGMI": "⚔️"}
+
+        col1, col2, col3, col4 = st.columns(4)
+        cols_map = [col1, col2, col3, col4]
+        selected_game = st.session_state.reg_data.get("game", "")
+
+        for i, g in enumerate(GAMES):
+            with cols_map[i]:
+                is_sel = selected_game == g
+                st.markdown(
+                    f"""<div style='background:{"linear-gradient(135deg,#2a1a4e,#1e1e3a)" if is_sel else "#1e1e3a"};
+                    border:2px solid {"#a855f7" if is_sel else "#2a2a4a"};border-radius:12px;
+                    padding:16px;text-align:center;cursor:pointer;'>
+                    <div style='font-size:2.5rem'>{game_emojis[g]}</div>
+                    <div style='font-size:0.8rem;font-weight:700;color:{"#a855f7" if is_sel else "#9ca3af"};margin-top:8px'>{g}</div>
+                    {"<div style='font-size:0.7rem;color:#10b981;margin-top:4px'>✓ Selected</div>" if is_sel else ""}
+                    </div>""",
+                    unsafe_allow_html=True
+                )
+                if st.button(f"Select" if not is_sel else "✓ Selected", key=f"game_{g}", use_container_width=True):
+                    st.session_state.reg_data["game"] = g
+                    st.rerun()
+
+        st.divider()
+        st.subheader("🕹️ Select Mode")
+        mode = st.radio("Mode", MODES, horizontal=True, key="mode_select",
+                        index=MODES.index(st.session_state.reg_data.get("mode", "Squad")))
+        st.session_state.reg_data["mode"] = mode
+
+        st.divider()
+        if st.button("Next: Choose Tier →", type="primary", use_container_width=True):
+            if not st.session_state.reg_data.get("game"):
+                st.error("Please select a game first!")
+            else:
+                st.session_state.reg_step = 2
+                st.rerun()
+
+    # ── STEP 2: Choose Tier ───────────────────────────────────────────────────
+    elif step == 2:
+        g = st.session_state.reg_data.get("game", "")
+        m = st.session_state.reg_data.get("mode", "")
+        st.subheader(f"💰 Choose Your Tier — {g} {m}")
+
+        for tier_name, tier in TIERS.items():
+            is_sel = st.session_state.reg_data.get("tier") == tier_name
+            with st.container():
+                st.markdown(
+                    f"""<div style='background:{"linear-gradient(135deg,#2a1a4e,#1e1e3a)" if is_sel else "#1e1e3a"};
+                    border:2px solid {tier["color"] if is_sel else "#2a2a4a"};
+                    border-radius:16px;padding:20px;margin-bottom:8px;'>
+                    <div style='display:flex;justify-content:space-between;align-items:center;'>
+                        <div>
+                            <div style='font-size:1.2rem;font-weight:900;color:{tier["color"]}'>{tier_name}</div>
+                            <div style='font-size:0.8rem;color:#6b7280;margin-top:4px'>Prize Pool: <span style='color:#f59e0b;font-weight:700'>₹{tier["pool"]}</span></div>
+                        </div>
+                        <div style='text-align:right'>
+                            <div style='font-size:0.75rem;color:#6b7280'>Prizes</div>
+                            <div style='font-size:0.8rem;color:#f59e0b'>🥇₹{tier["prizes"][0]} &nbsp;🥈₹{tier["prizes"][1]} &nbsp;🥉₹{tier["prizes"][2]}</div>
+                        </div>
+                    </div>
+                    </div>""",
+                    unsafe_allow_html=True
+                )
+                if st.button(f"{'✓ Selected' if is_sel else 'Choose'} {tier_name}", key=f"tier_{tier_name}", use_container_width=True):
+                    st.session_state.reg_data["tier"] = tier_name
+                    st.session_state.reg_data["tier_info"] = tier
+                    st.rerun()
+
+        st.divider()
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("← Back", use_container_width=True):
+                st.session_state.reg_step = 1
+                st.rerun()
+        with col2:
+            if st.button("Next: Team Details →", type="primary", use_container_width=True):
+                if not st.session_state.reg_data.get("tier"):
+                    st.error("Please select a tier!")
+                else:
+                    st.session_state.reg_step = 3
+                    st.rerun()
+
+    # ── STEP 3: Team Details ──────────────────────────────────────────────────
+    elif step == 3:
+        mode = st.session_state.reg_data.get("mode", "Squad")
+        tier_info = st.session_state.reg_data.get("tier_info", {})
+        tier_name = st.session_state.reg_data.get("tier", "")
+
+        st.subheader("👥 Register Your Team")
+        st.markdown(f"**{st.session_state.reg_data.get('game')}** • {mode} • "
+                    f"<span style='color:{tier_info.get('color','#a855f7')}'>{tier_name}</span>",
+                    unsafe_allow_html=True)
+        st.divider()
+
+        col1, col2 = st.columns(2)
+        with col1:
+            team_name = st.text_input("🏷️ Team Name *", placeholder="e.g. Team Alpha",
+                                       value=st.session_state.reg_data.get("team_name", ""))
+            player1 = st.text_input("🎮 Your In-Game Name (IGN) *", placeholder="Your username in game",
+                                     value=st.session_state.reg_data.get("player1", ""))
+
+        with col2:
+            phone = st.text_input("📱 Phone Number *", placeholder="10-digit number",
+                                   value=st.session_state.reg_data.get("phone", ""))
+            email = st.text_input("📧 Email (optional)", placeholder="yourmail@gmail.com",
+                                   value=st.session_state.reg_data.get("email", ""))
+
+        if mode in ["Duo", "Squad"]:
+            st.divider()
+            st.subheader("👥 Team Members")
+            player2 = st.text_input("Player 2 IGN *", value=st.session_state.reg_data.get("player2", ""))
+        else:
+            player2 = ""
+
+        if mode == "Squad":
+            player3 = st.text_input("Player 3 IGN *", value=st.session_state.reg_data.get("player3", ""))
+            player4 = st.text_input("Player 4 IGN *", value=st.session_state.reg_data.get("player4", ""))
+        else:
+            player3 = player4 = ""
+
+        st.divider()
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("← Back", use_container_width=True):
+                st.session_state.reg_step = 2
+                st.rerun()
+        with col2:
+            if st.button("Next: Payment →", type="primary", use_container_width=True):
+                errors = []
+                if not team_name.strip(): errors.append("Team name is required")
+                if not player1.strip(): errors.append("Your IGN is required")
+                if not phone.strip() or len(phone.strip()) < 10: errors.append("Valid phone number required")
+                if mode in ["Duo", "Squad"] and not player2.strip(): errors.append("Player 2 IGN required")
+                if mode == "Squad" and (not player3.strip() or not player4.strip()): errors.append("All squad members required")
+
+                if errors:
+                    for e in errors:
+                        st.error(e)
+                else:
+                    st.session_state.reg_data.update({
+                        "team_name": team_name, "player1": player1, "phone": phone,
+                        "email": email, "player2": player2, "player3": player3, "player4": player4
+                    })
+                    st.session_state.reg_step = 4
+                    st.rerun()
+
+    # ── STEP 4: Payment ───────────────────────────────────────────────────────
+    elif step == 4:
+        d = st.session_state.reg_data
+        tier_info = d.get("tier_info", {})
+        tier_name = d.get("tier", "")
+        fee = tier_info.get("fee", 0)
+        prizes = tier_info.get("prizes", [0, 0, 0])
+        color = tier_info.get("color", "#a855f7")
+
+        st.subheader("💳 Confirm & Pay")
+
+        col1, col2 = st.columns([3, 2])
+        with col1:
+            st.markdown("#### 📋 Order Summary")
+            st.markdown(
+                f"""<div style='background:#1e1e3a;border-radius:16px;padding:20px;'>
+                <table style='width:100%;color:#e2d9f3;font-size:0.9rem;'>
+                <tr><td style='color:#6b7280;padding:6px 0'>Game</td><td style='text-align:right;font-weight:700'>{d.get('game')}</td></tr>
+                <tr><td style='color:#6b7280;padding:6px 0'>Mode</td><td style='text-align:right'>{d.get('mode')}</td></tr>
+                <tr><td style='color:#6b7280;padding:6px 0'>Tier</td><td style='text-align:right;color:{color};font-weight:700'>{tier_name}</td></tr>
+                <tr><td style='color:#6b7280;padding:6px 0'>Team</td><td style='text-align:right;font-weight:700'>{d.get('team_name')}</td></tr>
+                <tr><td style='color:#6b7280;padding:6px 0'>Players</td><td style='text-align:right;font-size:0.8rem'>
+                    {', '.join(filter(None, [d.get('player1'), d.get('player2'), d.get('player3'), d.get('player4')]))}</td></tr>
+                <tr style='border-top:1px solid #2a2a4a'><td style='padding:10px 0 4px;font-weight:700'>Entry Fee</td>
+                    <td style='text-align:right;font-size:1.4rem;font-weight:900;color:{color}'>₹{fee}</td></tr>
+                </table></div>""",
+                unsafe_allow_html=True
+            )
+
+        with col2:
+            st.markdown("#### 🏆 You Could Win")
+            st.markdown(
+                f"""<div style='background:#0e0e1a;border:1px solid #1e1e3a;border-radius:16px;padding:16px;'>
+                <div style='color:#6b7280;font-size:0.75rem;margin-bottom:12px'>Prize Pool: <span style='color:#f59e0b;font-weight:700'>₹{tier_info.get('pool',0)}</span></div>
+                <div style='display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1e1e3a'><span>🥇 1st</span><span style='color:#f59e0b;font-weight:700'>₹{prizes[0]}</span></div>
+                <div style='display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1e1e3a'><span>🥈 2nd</span><span style='color:#f59e0b;font-weight:700'>₹{prizes[1]}</span></div>
+                <div style='display:flex;justify-content:space-between;padding:6px 0'><span>🥉 3rd</span><span style='color:#f59e0b;font-weight:700'>₹{prizes[2]}</span></div>
+                </div>""",
+                unsafe_allow_html=True
+            )
+
+            st.markdown("#### 💳 Payment Method")
+            st.info("🔒 Secure payment via **Razorpay**\nUPI • Cards • Net Banking • Wallets")
+
+        st.divider()
+
+        # Razorpay button using HTML/JS
+        rzp_key = "rzp_test_your_key_here"
+        st.markdown(
+            f"""
+            <div style='text-align:center;padding:20px;'>
+                <div id='rzp-button-container'>
+                    <button onclick='openRazorpay()' style='
+                        background:linear-gradient(135deg,#7c3aed,#5b21b6);
+                        color:white;border:none;border-radius:12px;
+                        padding:16px 48px;font-size:1.1rem;font-weight:800;
+                        cursor:pointer;width:100%;max-width:400px;
+                        box-shadow:0 8px 25px rgba(124,58,237,0.4);
+                        transition:all 0.2s;'>
+                        🔒 Pay ₹{fee} via Razorpay
+                    </button>
+                </div>
+                <p style='color:#6b7280;font-size:0.75rem;margin-top:12px'>
+                    🛡️ Slot confirmed only after successful payment
+                </p>
+            </div>
+            <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+            <script>
+            function openRazorpay() {{
+                var options = {{
+                    key: '{rzp_key}',
+                    amount: {fee * 100},
+                    currency: 'INR',
+                    name: 'BattleZone Esports',
+                    description: '{tier_name} - {d.get("game", "")} {d.get("mode", "")}',
+                    prefill: {{
+                        contact: '{d.get("phone", "")}',
+                        email: '{d.get("email", "") or "player@battlezone.gg"}'
+                    }},
+                    notes: {{
+                        team_name: '{d.get("team_name", "")}',
+                        game: '{d.get("game", "")}',
+                        tier: '{tier_name}'
+                    }},
+                    theme: {{ color: '{color}' }},
+                    handler: function(response) {{
+                        document.getElementById('rzp-button-container').innerHTML =
+                            '<div style="color:#10b981;font-size:1.2rem;font-weight:700;padding:20px;">✅ Payment Successful! Payment ID: ' + response.razorpay_payment_id + '</div>';
+                        setTimeout(function() {{
+                            window.parent.postMessage({{type:'payment_success',payment_id:response.razorpay_payment_id}}, '*');
+                        }}, 1000);
+                    }}
+                }};
+                var rzp = new Razorpay(options);
+                rzp.open();
+            }}
+            </script>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.divider()
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("← Back", use_container_width=True):
+                st.session_state.reg_step = 3
+                st.rerun()
+        with col2:
+            if st.button("✅ Mark as Paid (Demo)", use_container_width=True, type="primary"):
+                st.session_state.reg_step = 5
+                st.rerun()
+
+    # ── STEP 5: Confirmed ─────────────────────────────────────────────────────
+    elif step == 5:
+        d = st.session_state.reg_data
+        tier_info = d.get("tier_info", {})
+        color = tier_info.get("color", "#a855f7")
+
+        st.markdown(
+            f"""<div style='text-align:center;padding:40px 20px;'>
+            <div style='font-size:5rem;margin-bottom:16px'>🎉</div>
+            <div style='font-size:2.5rem;font-weight:900;color:white;margin-bottom:8px'>You're In!</div>
+            <div style='color:#6b7280;font-size:1rem;margin-bottom:32px'>Your slot has been confirmed. Get ready to battle!</div>
+            </div>""",
+            unsafe_allow_html=True
+        )
+
+        # Ticket
+        players_list = ', '.join(filter(None, [d.get('player1'), d.get('player2'), d.get('player3'), d.get('player4')]))
+        st.markdown(
+            f"""<div style='background:linear-gradient(135deg,#1a0a2e,#0e1a2e);
+            border:2px solid {color};border-radius:20px;padding:24px;
+            max-width:500px;margin:0 auto 32px;
+            box-shadow:0 0 40px {color}44;'>
+            <div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px'>
+                <div>
+                    <div style='font-size:0.7rem;color:{color};font-weight:700;letter-spacing:2px'>TOURNAMENT TICKET</div>
+                    <div style='font-size:1.4rem;font-weight:900;color:white;margin-top:4px'>{d.get("game")}</div>
+                    <div style='color:#6b7280;font-size:0.85rem'>{d.get("mode")} • {d.get("tier","")}</div>
+                </div>
+                <div style='font-size:2.5rem'>🎮</div>
+            </div>
+            <div style='border-top:1px dashed #2a2a4a;border-bottom:1px dashed #2a2a4a;padding:12px 0;margin:12px 0;'>
+            <table style='width:100%;color:#e2d9f3;font-size:0.85rem;'>
+            <tr><td style='color:#6b7280;padding:4px 0'>Team</td><td style='text-align:right;font-weight:700'>{d.get("team_name")}</td></tr>
+            <tr><td style='color:#6b7280;padding:4px 0'>Players</td><td style='text-align:right;font-size:0.8rem'>{players_list}</td></tr>
+            <tr><td style='color:#6b7280;padding:4px 0'>Entry Paid</td><td style='text-align:right;color:#10b981;font-weight:700'>₹{tier_info.get("fee",0)} ✅</td></tr>
+            <tr><td style='color:#6b7280;padding:4px 0'>Prize Pool</td><td style='text-align:right;color:#f59e0b;font-weight:700'>₹{tier_info.get("pool",0)}</td></tr>
+            </table></div>
+            <div style='text-align:center;color:#374151;font-size:0.75rem;margin-top:12px'>
+            🔐 Room ID will be shared 15 min before match start on your phone
+            </div></div>""",
+            unsafe_allow_html=True
+        )
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🎮 Register Another Team", use_container_width=True):
+                st.session_state.reg_step = 1
+                st.session_state.reg_data = {}
+                st.rerun()
+        with col2:
+            if st.button("🏠 Go to Overview", type="primary", use_container_width=True):
+                st.session_state.reg_step = 1
+                st.session_state.reg_data = {}
+                st.rerun()
 
 # ── LEADERBOARD ───────────────────────────────────────────────────────────────
 elif page == "🏆 Leaderboard":
