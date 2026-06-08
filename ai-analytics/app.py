@@ -93,6 +93,7 @@ with st.sidebar:
     st.divider()
     page = st.radio("Navigate", [
         "🏠 Overview",
+        "🔴 Live Tournament",
         "🏆 Leaderboard",
         "🔍 Player Scout",
         "⚔️ PvP Comparison",
@@ -153,6 +154,187 @@ if page == "🏠 Overview":
             summary_data = gstats.to_string() if not gstats.empty else "No data"
             summary = generate_tournament_summary(summary_data)
             st.markdown(f'<div class="commentary-box">💬 {summary}</div>', unsafe_allow_html=True)
+
+# ── LIVE TOURNAMENT ───────────────────────────────────────────────────────────
+elif page == "🔴 Live Tournament":
+    st.markdown('<p class="neon-title">🔴 Live Tournament</p>', unsafe_allow_html=True)
+    st.caption("Watch the match live + real-time AI analytics side by side")
+    st.divider()
+
+    # ── Stream setup ──────────────────────────────────────────────────────────
+    with st.expander("⚙️ Tournament Setup", expanded=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            tournament_name = st.text_input("Tournament Name", value="BattleZone Championship S1")
+            game = st.selectbox("Game", ["Free Fire MAX", "PUBG Mobile", "Call of Duty Mobile", "BGMI"])
+            prize_pool = st.number_input("Prize Pool (₹)", min_value=0, value=50000, step=1000)
+        with col2:
+            stream_platform = st.selectbox("Stream Platform", ["YouTube", "Twitch"])
+            stream_url = st.text_input(
+                "Stream URL or Video ID",
+                placeholder="e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ or just the video ID",
+                value=""
+            )
+            auto_refresh = st.toggle("Auto-refresh stats (30s)", value=True)
+
+    st.divider()
+
+    # ── Parse stream embed URL ────────────────────────────────────────────────
+    def get_embed_url(url, platform):
+        if not url:
+            return None
+        if platform == "YouTube":
+            # Handle various YouTube URL formats
+            if "youtube.com/watch?v=" in url:
+                vid_id = url.split("v=")[1].split("&")[0]
+            elif "youtu.be/" in url:
+                vid_id = url.split("youtu.be/")[1].split("?")[0]
+            elif "youtube.com/live/" in url:
+                vid_id = url.split("youtube.com/live/")[1].split("?")[0]
+            else:
+                vid_id = url.strip()
+            return f"https://www.youtube.com/embed/{vid_id}?autoplay=1&mute=0"
+        elif platform == "Twitch":
+            if "twitch.tv/" in url:
+                channel = url.split("twitch.tv/")[1].split("/")[0]
+            else:
+                channel = url.strip()
+            return f"https://player.twitch.tv/?channel={channel}&parent=battlezone-esports-7nps6yjk8yf5xnjlnih85g.streamlit.app&autoplay=true"
+        return None
+
+    embed_url = get_embed_url(stream_url, stream_platform)
+
+    # ── Main layout: stream left, stats right ─────────────────────────────────
+    col_stream, col_stats = st.columns([3, 2])
+
+    with col_stream:
+        st.markdown(f"### 🎮 {tournament_name}")
+        st.markdown(f"**{game}** &nbsp;|&nbsp; 💰 Prize Pool: ₹{prize_pool:,}", unsafe_allow_html=True)
+
+        if embed_url:
+            # Embed the live stream
+            st.markdown(
+                f"""
+                <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:12px;border:2px solid #a855f7;">
+                    <iframe
+                        src="{embed_url}"
+                        style="position:absolute;top:0;left:0;width:100%;height:100%;"
+                        frameborder="0"
+                        allowfullscreen
+                        allow="autoplay; encrypted-media">
+                    </iframe>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        else:
+            # Placeholder when no stream URL
+            st.markdown(
+                """
+                <div style="
+                    background: linear-gradient(135deg, #1e1e3a, #0e0e1a);
+                    border: 2px dashed #a855f7;
+                    border-radius: 12px;
+                    height: 340px;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    color: #6b7280;
+                    font-size: 1.1rem;
+                ">
+                    <div style="font-size:3rem">📺</div>
+                    <div style="margin-top:12px;color:#a855f7;font-weight:600">Paste a YouTube or Twitch URL above</div>
+                    <div style="font-size:0.85rem;margin-top:6px">The live stream will appear here</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        # Chat embed for YouTube
+        if embed_url and stream_platform == "YouTube" and stream_url:
+            vid_id = embed_url.split("/embed/")[1].split("?")[0]
+            st.markdown("**💬 Live Chat**")
+            st.markdown(
+                f"""
+                <iframe
+                    src="https://www.youtube.com/live_chat?v={vid_id}&embed_domain=battlezone-esports-7nps6yjk8yf5xnjlnih85g.streamlit.app"
+                    style="width:100%;height:300px;border-radius:8px;border:1px solid #6c3fc5;"
+                    frameborder="0">
+                </iframe>
+                """,
+                unsafe_allow_html=True
+            )
+
+    with col_stats:
+        st.markdown("### 📊 Live Stats")
+
+        if auto_refresh:
+            import time
+            st.caption(f"🔄 Auto-refreshing • Last updated: {pd.Timestamp.now().strftime('%H:%M:%S')}")
+
+        # Live KPIs
+        k1, k2, k3 = st.columns(3)
+        k1.metric("👥 Players", len(players_df))
+        k2.metric("⚔️ Total Kills", f"{players_df['total_kills'].sum():,}")
+        k3.metric("🏆 Matches", results_df["match_id"].nunique() if not results_df.empty else 0)
+
+        st.divider()
+
+        # Live leaderboard — top 8
+        st.markdown("**🏆 Live Leaderboard**")
+        top8 = players_df.nlargest(8, "rank_points").reset_index(drop=True)
+        tier_colors = {
+            "Bronze": "🟤", "Silver": "⚪", "Gold": "🟡",
+            "Platinum": "🔵", "Diamond": "💎", "Master": "🟣", "Legend": "🔴"
+        }
+        for i, row in top8.iterrows():
+            rank_icon = ["🥇","🥈","🥉"][i] if i < 3 else f"#{i+1}"
+            tier_icon = tier_colors.get(row["rank_tier"], "⚪")
+            col_r, col_n, col_p = st.columns([1, 3, 2])
+            col_r.markdown(f"**{rank_icon}**")
+            col_n.markdown(f"{tier_icon} **{row['username']}**")
+            col_p.markdown(f"`{int(row['rank_points'])} pts`")
+
+        st.divider()
+
+        # Kill chart - compact
+        st.markdown("**⚔️ Top Killers**")
+        top5_kills = players_df.nlargest(5, "total_kills")[["username", "total_kills"]]
+        fig = px.bar(top5_kills, x="total_kills", y="username", orientation="h",
+                     color="total_kills", color_continuous_scale="Purples",
+                     template="plotly_dark")
+        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                          margin=dict(t=5, b=5, l=5, r=5), height=200,
+                          showlegend=False, coloraxis_showscale=False,
+                          yaxis_title="", xaxis_title="Kills")
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+
+        # AI live commentary
+        st.markdown("**🤖 AI Live Commentary**")
+        if st.button("🎙️ Generate Live Commentary", type="primary", use_container_width=True):
+            top_player = players_df.nlargest(1, "rank_points").iloc[0]
+            match_data = {
+                "game": game,
+                "winner": top_player["username"],
+                "winner_kills": int(top_player["total_kills"] // max(top_player["matches_played"], 1)),
+                "prize_pool": prize_pool,
+                "top_players": [
+                    {"rank": i+1, "username": row["username"],
+                     "kills": int(row["total_kills"] // max(row["matches_played"], 1))}
+                    for i, (_, row) in enumerate(players_df.nlargest(5, "rank_points").iterrows())
+                ],
+            }
+            with st.spinner("AI is on the mic..."):
+                commentary = generate_match_commentary(match_data)
+            st.markdown(f'<div class="commentary-box">🎙️ {commentary}</div>', unsafe_allow_html=True)
+
+        # Auto refresh
+        if auto_refresh:
+            time.sleep(30)
+            st.rerun()
 
 # ── LEADERBOARD ───────────────────────────────────────────────────────────────
 elif page == "🏆 Leaderboard":
